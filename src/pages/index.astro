@@ -1,9 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import Greeting from "../components/Greeting";
 ---
 
 <BaseLayout pageTitle="Home">
-	<h1>Princess Celestia reports :3</h1>
-
-	<h2>the subtitle</h2>
+	<Greeting client:load messages={["Ooh-wee", "Hi", "Hello", "Howdy", "Hey there", "Nya", "Hola", "Ahoy", "Hej", "Hallo", "Habari"]} />
 </BaseLayout>
