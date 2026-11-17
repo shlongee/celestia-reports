@@ -5,7 +5,7 @@
     "**/*"
   ],
   "exclude": [
-    "dist"
+    "dist",  "public/vendor"
   ],
   "compilerOptions": {
     "strictNullChecks": true,
