@@ -6,7 +6,7 @@
 
 html {
 	background-color: #0D0950;
-	font-family: sans-serif;
+	font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
 	color: #FFF;
 }
 
@@ -24,15 +24,15 @@ body {
 
 h1 {
 	margin: 1rem 0;
-	font-size: 2.5rem;
+	font-size: 1.75rem;
 }
 
 /* nav styles */
 .menu {
-	background-color: #ff9776;
+	background-color: #0d2969;
 	border: none;
-	color:#ff0000;
-	font-size: 1.2rem;
+	color:#fff;
+	font-size: 1rem;
 	font-weight: bold;
 	padding: 5px 10px;
 }
@@ -48,7 +48,7 @@ h1 {
 	text-align: center;
 	padding: 10px 0;
 	text-decoration: none;
-	font-size: 1.2rem;
+	font-size: 1rem;
 	font-weight: bold;
 	text-transform: uppercase;
 	color: #ffffff;

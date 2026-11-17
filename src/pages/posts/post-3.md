@@ -1,7 +1,8 @@
 ---
+layout: ../../layouts/MarkdownPostLayout.astro
 title: Third Blog Post
 pubDate: 2026-11-16
-description: "That's hard, yet interesting!"
+description: That's hard, yet interesting!
 author: Schlong Eater
 image:
     url: "https://docs.astro.build/assets/rays.webp"

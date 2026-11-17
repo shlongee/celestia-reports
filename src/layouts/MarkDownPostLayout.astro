@@ -1,28 +1,39 @@
 ---
-import { Font } from 'astro:assets';
 import '../styles/global.css';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const { frontmatter } = Astro.props;
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
+<BaseLayout pageTitle={frontmatter.title}>
+    <h1>{frontmatter.title}</h1>
+    <p>Written by {frontmatter.author}</p>
+    <p>Published on: {frontmatter.pubDate.toString().slice(0,10)}</p>
+    <img src={frontmatter.image.url} width="300" alt={frontmatter.image.alt} />
+    <main>
+        <div class="tags">
+            {frontmatter.tags.map((tag: string) => <p class="tag"> <a href={`/tags/${tag}`}> {tag} </a> </p> )}
+        </div>
+        <slot />
+    </main>
+</BaseLayout>
 
-        <Font cssVariable="--font-atkinson" preload />
+<style>
+    a {
+        color: #00539f;
+    }
 
-		<title>Astro</title>
-	</head>
-	<body>
-        <nav>
-            <a href="/">Home</a>
-            <a href="/about/">About</a>
-            <a href="/blog/">Blog</a>
-        </nav>
+    .tags {
+        display: flex;
+        flex-wrap: wrap;
+    }
 
-        <main>
-            <slot />
-        </main>
-	</body>
-</html>
+    .tag {
+        margin: 0.25em;
+        border: dotted 3px #00f;
+        border-radius: .5em;
+        padding: .5em 1em;
+        font-size: 1.15em;
+        background-color: #fff;
+    }
+</style>

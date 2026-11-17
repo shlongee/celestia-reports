@@ -1,20 +1,14 @@
 ---
-layout: ../../layouts/MarkDownPostLayout.astro
-title: 'First Blog Post'
+layout: ../../layouts/MarkdownPostLayout.astro
+title: First Blog Post
 pubDate: 2016-07-13
-description: 'This is the first post of my epic blog.'
-author: 'Schlong Eater'
+description: This is the first post of my epic blog.
+author: Schlong Eater
 image:
     url: 'https://docs.astro.build/assets/rose.webp'
     alt: 'The cool Astro logo'
 tags: ["blogging", "programming", "learning"]
 ---
-
-# The Epic Blog Post (first one)
-
-Published on: 2016-07-13
-
-Welcum to my _new blog_ about learning programming! Here, I will share my journey as I progress in my projects.
 
 ## What I've accomplished
 
