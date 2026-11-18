@@ -1,9 +1,11 @@
 ---
+import { ClientRouter, fade } from "astro:transitions";
 import { Font } from "astro:assets";
 import "../styles/global.css";
 import Seo from "../components/Seo.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
+import ArcaneControls from "../components/ArcaneControls.astro";
 
 export interface Props {
   title: string;
@@ -28,18 +30,52 @@ const {
     <meta charset="UTF-8" />
     <Font cssVariable="--kejter" preload />
     <Seo title={title} description={description} ogType={ogType} pubDate={pubDate} />
+    <ClientRouter />
+    <script is:inline>
+      (() => {
+        const apply = () => {
+          const savedTheme = localStorage.getItem("theme");
+          const isDark =
+            savedTheme === "dark" ||
+            (!savedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", isDark);
+          document.documentElement.classList.toggle(
+            "crystal",
+            localStorage.getItem("shlongeeland-crystal") === "true",
+          );
+        };
+        apply();
+        document.addEventListener("astro:after-swap", apply);
+      })();
+    </script>
     <slot name="head" />
   </head>
   <body class:list={{ immersive }}>
-    <canvas class="wormhole-global-bg" data-space-wormhole aria-hidden="true"></canvas>
-    <div class="viewport-vignette" aria-hidden="true"></div>
+    <canvas
+      class="wormhole-global-bg"
+      data-space-wormhole
+      transition:persist="wormhole"
+      aria-hidden="true"
+    ></canvas>
+    <div class="viewport-vignette" transition:persist="vignette" aria-hidden="true"></div>
 
     {immersive ? (
-      <main>
+      <main
+        class="immersive-stage"
+        transition:name="page-stage"
+        transition:animate={fade({ duration: "0.45s" })}
+      >
+        <div class="home-arcane-dock">
+          <ArcaneControls showCrystal={false} />
+        </div>
         <slot />
       </main>
     ) : (
-      <div class="codex-shell">
+      <div
+        class="codex-shell"
+        transition:name="page-stage"
+        transition:animate={fade({ duration: "0.45s" })}
+      >
         <div class="codex-sheet">
           <Header />
           <main class="site-main">
@@ -53,6 +89,9 @@ const {
     <script>
       import { mountSpaceWormhole } from "../scripts/space-wormhole";
       import { mountCursorGlow } from "../scripts/cursor-glow";
+      import { mountArcaneControls } from "../scripts/arcane-controls";
+
+      mountArcaneControls();
       mountSpaceWormhole();
       mountCursorGlow();
     </script>

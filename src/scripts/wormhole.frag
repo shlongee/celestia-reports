@@ -10,6 +10,7 @@ uniform vec2 uPointer;
 uniform vec2 uResolution;
 
 uniform vec3 uColorDeep;
+uniform vec3 uColorFog;
 uniform vec3 uColorBase;
 uniform vec3 uColorWarp;
 uniform vec3 uColorAccent;
@@ -42,11 +43,12 @@ float noise3(vec3 x) {
   );
 }
 
-float fbm3(vec3 p) {
+float fbm3(vec3 p, float detailWeight) {
   float value = 0.0;
   float amp = 0.5;
   for (int i = 0; i < 4; i++) {
-    value += amp * noise3(p);
+    float weight = (i >= 2) ? detailWeight : 1.0;
+    value += amp * weight * noise3(p);
     p *= 2.03;
     amp *= 0.5;
   }
@@ -59,41 +61,46 @@ vec2 rotate2D(vec2 v, float a) {
   return vec2(v.x * c - v.y * s, v.x * s + v.y * c);
 }
 
-vec3 renderWormhole(vec2 uv, float swirlStrength, float withCore) {
+vec3 renderWormhole(vec2 uv, float swirlStrength) {
   float dist = max(length(uv), 0.0005);
-  // Seamless unit circle direction (no atan branch cut!)
   vec2 dir = uv / dist;
   vec2 swirled = rotate2D(dir, swirlStrength / (dist + 0.35));
 
   float travel = uTime * uSpeed + uWarp * 2.2;
-  float radial = 1.4 / dist + travel;
+  float radial = 1.35 / dist + travel;
 
-  float n1 = fbm3(vec3(swirled * 1.65, radial * 0.65 - travel * 0.25));
-  float n2 = fbm3(vec3(swirled * 3.1 + n1 * 0.55, radial * 1.15 - travel * 0.55));
+  // Blur out fine octaves in the far center so the wormhole dissolves into mist
+  float detailFade = smoothstep(0.06, 0.62, dist);
 
-  vec3 neb = mix(uColorBase, uColorWarp, uWarp * 0.75 + n1 * 0.35);
-  vec3 col = mix(uColorDeep, neb, smoothstep(0.24, 0.84, n2 * uDensity));
-  col += uColorAccent * smoothstep(0.55, 0.92, n1 * n2) * (0.5 + uWarp * 0.85);
+  float n1 = fbm3(vec3(swirled * 1.6, radial * 0.6 - travel * 0.24), detailFade);
+  float n2 = fbm3(vec3(swirled * 3.0 + n1 * 0.5, radial * 1.1 - travel * 0.52), detailFade * 0.85);
 
-  if (withCore > 0.5) {
-    float core = smoothstep(0.45, 0.02, dist) * (0.28 + uWarp * 0.9);
-    col += mix(vec3(0.35, 0.55, 1.0), vec3(1.0, 0.85, 0.6), uWarp) * core;
-  }
+  vec3 neb = mix(uColorBase, uColorWarp, uWarp * 0.72 + n1 * 0.38);
+  vec3 col = mix(uColorDeep, neb, smoothstep(0.22, 0.84, n2 * uDensity));
+  col += uColorAccent * smoothstep(0.56, 0.92, n1 * n2) * (0.48 + uWarp * 0.85) * detailFade;
 
-  // Keep side margins glowing gently instead of crushing to black on wide screens
-  col *= mix(0.45, 1.0, smoothstep(2.4, 0.25, dist));
+  // Strong mysterious distance fog enveloping the deep throat of the wormhole
+  float distanceFog = smoothstep(0.78, 0.04, dist);
+  float deepMist = exp(-dist * 2.5);
+  col = mix(col, uColorFog, clamp(distanceFog * 0.82 + deepMist * 0.32, 0.0, 0.96));
+
+  // Subtle luminous veil at the mist horizon
+  float veil = smoothstep(0.55, 0.08, dist) * smoothstep(0.0, 0.25, dist);
+  col += mix(uColorWarp, uColorAccent, 0.35 + uWarp * 0.5) * veil * (0.18 + uWarp * 0.45);
+
+  // Gentle side-margin illumination (stays visible behind the blog)
+  col = mix(uColorDeep * 0.9 + uColorFog * 0.15, col, smoothstep(2.6, 0.25, dist));
   return col;
 }
 
 void main() {
-  // Exact 1:1 aspect ratio regardless of viewport width/height
   float minDim = max(min(uResolution.x, uResolution.y), 1.0);
   vec2 uv = (vUv - 0.5) * 2.0 * (uResolution / minDim);
   uv -= uPointer * 0.08;
 
   vec3 col = (vUv.x < uSplit)
-    ? renderWormhole(uv, 0.0, 0.0)
-    : renderWormhole(uv, uSwirl, 1.0);
+    ? renderWormhole(uv, 0.0)
+    : renderWormhole(uv, uSwirl);
 
   if (uSplit > 0.01 && uSplit < 0.99 && abs(vUv.x - uSplit) < 0.002) {
     col = vec3(1.0, 0.85, 0.4);

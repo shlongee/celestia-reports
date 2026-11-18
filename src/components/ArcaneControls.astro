@@ -1,0 +1,47 @@
+---
+import ThemeIcon from "./ThemeIcon.astro";
+
+interface Props {
+  showCrystal?: boolean;
+}
+
+const { showCrystal = true } = Astro.props;
+---
+
+<div class="arcane-controls">
+  <ThemeIcon />
+
+  {showCrystal && (
+    <button
+      type="button"
+      class="arcane-btn arcane-btn--crystal"
+      data-glass-toggle
+      aria-label="Toggle crystal transparency"
+      aria-pressed="false"
+      title="Toggle crystal glass mode"
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path
+          d="M12 2L5 9.5 12 22l7-12.5L12 2zm0 2.9l4.1 4.4L12 18.2 7.9 9.3 12 4.9z"
+          fill="currentColor"
+        />
+        <path d="M5 9.5h14" stroke="currentColor" stroke-width="1.2" opacity="0.65" />
+      </svg>
+    </button>
+  )}
+
+  <button
+    type="button"
+    class="arcane-btn arcane-btn--shuffle"
+    data-wormhole-shuffle
+    aria-label="Shuffle wormhole colors"
+    title="Shuffle wormhole colors"
+  >
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path
+        d="M12 3a9 9 0 1 0 8.5 12h-2.2A7 7 0 1 1 12 5c1.9 0 3.7.8 4.9 2.1L14 10h7V3l-2.6 2.6A8.9 8.9 0 0 0 12 3z"
+        fill="currentColor"
+      />
+    </svg>
+  </button>
+</div>

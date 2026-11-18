@@ -1,6 +1,3 @@
----
-// src/components/Float16Visualizer.astro
----
 <div class="fp-viz">
   <div class="controls">
     <label>
@@ -34,56 +31,64 @@
     return Math.min(1, Math.round(Math.max(0, x) * 255) / 255);
   }
 
-  document.querySelectorAll('.fp-viz').forEach((root) => {
-    const canvas = root.querySelector<HTMLCanvasElement>('.viz-canvas');
-    const ctx = canvas?.getContext('2d');
-    const sInt = root.querySelector<HTMLInputElement>('.slider-int');
-    const sMax = root.querySelector<HTMLInputElement>('.slider-max');
-    const lInt = root.querySelector<HTMLElement>('.val-int');
-    const lMax = root.querySelector<HTMLElement>('.val-max');
+  function initVisualizers() {
+    document.querySelectorAll<HTMLElement>('.fp-viz').forEach((root) => {
+      if (root.dataset.vizInit) return;
+      root.dataset.vizInit = 'true';
 
-    if (!canvas || !ctx || !sInt || !sMax || !lInt || !lMax) return;
+      document.querySelectorAll('.fp-viz').forEach((root) => {
+        const canvas = root.querySelector<HTMLCanvasElement>('.viz-canvas');
+        const ctx = canvas?.getContext('2d');
+        const sInt = root.querySelector<HTMLInputElement>('.slider-int');
+        const sMax = root.querySelector<HTMLInputElement>('.slider-max');
+        const lInt = root.querySelector<HTMLElement>('.val-int');
+        const lMax = root.querySelector<HTMLElement>('.val-max');
 
-    const formats: { label: string; fn: (v: number) => number }[] = [
-      { label: 'R8G8B8A8 (8-bit: fixed 1/255 steps)', fn: (v) => quantize8Bit(v) },
-      { label: 'R11G11B10_FLOAT (32-bit HDR: 6/6/5-bit mantissa)', fn: (v) => quantizeFloat(v, 5) },
-      { label: 'R16G16B16A16 (64-bit HDR: 10-bit mantissa)', fn: (v) => quantizeFloat(v, 10) },
-    ];
+        if (!canvas || !ctx || !sInt || !sMax || !lInt || !lMax) return;
 
-    const draw = () => {
-      const intensity = parseFloat(sInt.value);
-      const maxGlow = parseFloat(sMax.value);
-      lInt.textContent = `${intensity.toFixed(1)}x`;
-      lMax.textContent = maxGlow.toFixed(2);
+        const formats: { label: string; fn: (v: number) => number }[] = [
+          { label: 'R8G8B8A8 (8-bit: fixed 1/255 steps)', fn: (v) => quantize8Bit(v) },
+          { label: 'R11G11B10_FLOAT (32-bit HDR: 6/6/5-bit mantissa)', fn: (v) => quantizeFloat(v, 5) },
+          { label: 'R16G16B16A16 (64-bit HDR: 10-bit mantissa)', fn: (v) => quantizeFloat(v, 10) },
+        ];
 
-      const w = canvas.width;
-      const barH = 44;
-      const gap = 22;
+        const draw = () => {
+          const intensity = parseFloat(sInt.value);
+          const maxGlow = parseFloat(sMax.value);
+          lInt.textContent = `${intensity.toFixed(1)}x`;
+          lMax.textContent = maxGlow.toFixed(2);
 
-      ctx.fillStyle = '#111';
-      ctx.fillRect(0, 0, w, canvas.height);
+          const w = canvas.width;
+          const barH = 44;
+          const gap = 22;
 
-      formats.forEach((fmt, idx) => {
-        const y = 20 + idx * (barH + gap);
-        for (let px = 0; px < w; px++) {
-          const t = px / (w - 1);
-          const raw = t * maxGlow;
-          const q = fmt.fn(raw);
-          const out = Math.min(1, q * intensity);
-          const c = Math.round(out * 255);
-          ctx.fillStyle = `rgb(${c}, ${Math.round(c * 0.55)}, ${Math.round(c * 0.15)})`;
-          ctx.fillRect(px, y, 1, barH);
-        }
-        ctx.fillStyle = '#eee';
-        ctx.font = '12px monospace';
-        ctx.fillText(fmt.label, 8, y - 5);
+          ctx.fillStyle = '#111';
+          ctx.fillRect(0, 0, w, canvas.height);
+
+          formats.forEach((fmt, idx) => {
+            const y = 20 + idx * (barH + gap);
+            for (let px = 0; px < w; px++) {
+              const t = px / (w - 1);
+              const raw = t * maxGlow;
+              const q = fmt.fn(raw);
+              const out = Math.min(1, q * intensity);
+              const c = Math.round(out * 255);
+              ctx.fillStyle = `rgb(${c}, ${Math.round(c * 0.55)}, ${Math.round(c * 0.15)})`;
+              ctx.fillRect(px, y, 1, barH);
+            }
+            ctx.fillStyle = '#eee';
+            ctx.font = '12px monospace';
+            ctx.fillText(fmt.label, 8, y - 5);
+          });
+      };
+
+      sInt.addEventListener('input', draw);
+      sMax.addEventListener('input', draw);
+      draw();
       });
-    };
-
-    sInt.addEventListener('input', draw);
-    sMax.addEventListener('input', draw);
-    draw();
-  });
+    });
+  }
+  document.addEventListener('astro:page-load', initVisualizers);
 </script>
 
 <style>

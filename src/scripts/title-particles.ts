@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { navigate } from "astro:transitions/client";
 
 const TOUCH_SIZE = 64;
 const TOUCH_MAX_AGE = 120;
@@ -171,13 +172,13 @@ function setupWarpLinks(effects: TravelEffects) {
     window.dispatchEvent(new CustomEvent("shlongeeland:warp"));
     if (effects.ready) effects.start();
     navigationTimer = window.setTimeout(() => {
-      window.location.assign(link.href);
-    }, 650);
+      void navigate(link.href);
+    }, 450);
   };
 
   document.addEventListener("click", onLinkClick);
-  window.addEventListener(
-    "pagehide",
+  document.addEventListener(
+    "astro:before-swap",
     () => {
       if (navigationTimer) window.clearTimeout(navigationTimer);
       document.removeEventListener("click", onLinkClick);
@@ -491,6 +492,7 @@ async function initTitleParticles() {
   window.addEventListener("pointerleave", clearPointer, { passive: true });
   window.addEventListener("resize", onResize, { passive: true });
   window.addEventListener("pagehide", dispose, { once: true });
+  document.addEventListener("astro:before-swap", dispose, { once: true });
 
   try {
     await loadFont(fontFamily);
@@ -508,3 +510,7 @@ async function initTitleParticles() {
 document.addEventListener("DOMContentLoaded", () => {
   void initTitleParticles();
 });
+
+document.addEventListener("astro:page-load", () => {
+  void initTitleParticles();
+})

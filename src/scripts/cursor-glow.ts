@@ -1,5 +1,5 @@
 const GLOW_SELECTOR =
-  ".wormhole-nav__btn, .post-card, .tag-pill, .clear-btn, .menu, .search-input";
+  ".wormhole-nav__btn, .post-card, .tag-pill, .clear-btn, .menu, .arcane-btn";
 
 interface GlowState {
   targetX: number;
@@ -10,11 +10,17 @@ interface GlowState {
   alpha: number;
 }
 
+let glowMounted = false;
+
 export function mountCursorGlow(): void {
+  if (glowMounted) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  glowMounted = true;
 
   const states = new Map<HTMLElement, GlowState>();
   let rafId = 0;
+  let activeEl: HTMLElement | null = null;
 
   const tick = () => {
     let keepRunning = false;
@@ -41,20 +47,21 @@ export function mountCursorGlow(): void {
       }
     }
 
-    if (keepRunning) {
-      rafId = requestAnimationFrame(tick);
-    } else {
-      rafId = 0;
-    }
+    rafId = keepRunning ? requestAnimationFrame(tick) : 0;
   };
 
   const ensureRunning = () => {
     if (!rafId) rafId = requestAnimationFrame(tick);
   };
 
-  let activeEl: HTMLElement | null = null;
+  const clearAll = () => {
+    activeEl = null;
+    for (const s of states.values()) s.targetAlpha = 0;
+    ensureRunning();
+  };
 
   const onPointerMove = (e: PointerEvent) => {
+    if (e.pointerType !== "mouse") return;
     const target = (e.target as Element | null)?.closest<HTMLElement>(GLOW_SELECTOR) ?? null;
 
     if (activeEl && activeEl !== target) {
@@ -74,14 +81,7 @@ export function mountCursorGlow(): void {
 
     let state = states.get(target);
     if (!state) {
-      state = {
-        targetX: localX,
-        targetY: localY,
-        x: localX,
-        y: localY,
-        targetAlpha: 1,
-        alpha: 0,
-      };
+      state = { targetX: localX, targetY: localY, x: localX, y: localY, targetAlpha: 1, alpha: 0 };
       states.set(target, state);
     } else {
       state.targetX = localX;
@@ -92,25 +92,7 @@ export function mountCursorGlow(): void {
     ensureRunning();
   };
 
-  const clearActive = () => {
-    if (activeEl) {
-      const prev = states.get(activeEl);
-      if (prev) prev.targetAlpha = 0;
-      activeEl = null;
-      ensureRunning();
-    }
-  };
-
   document.addEventListener("pointermove", onPointerMove, { passive: true });
-  document.addEventListener("pointerleave", clearActive, { passive: true });
-  window.addEventListener(
-    "pagehide",
-    () => {
-      cancelAnimationFrame(rafId);
-      document.removeEventListener("pointermove", onPointerMove);
-      document.removeEventListener("pointerleave", clearActive);
-      states.clear();
-    },
-    { once: true },
-  );
+  document.addEventListener("pointerleave", clearAll, { passive: true });
+  document.addEventListener("astro:before-swap", clearAll);
 }

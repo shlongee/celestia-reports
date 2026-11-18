@@ -1,22 +1,64 @@
 import * as THREE from "three";
 import tunnelVertex from "./wormhole.vert?raw";
 import tunnelFragment from "./wormhole.frag?raw";
+import starsVertex from "./stars.vert?raw";
+import starsFragment from "./stars.frag?raw";
+
+interface WormholePalette {
+  deep: string;
+  fog: string;
+  base: string;
+  warp: string;
+  accent: string;
+}
+
+const DARK_PALETTES: WormholePalette[] = [
+  { deep: "#03040b", fog: "#0b122b", base: "#23378c", warp: "#7b32bd", accent: "#d9a13d" },
+  { deep: "#020808", fog: "#082221", base: "#0f5951", warp: "#2a8c82", accent: "#9bf2ca" },
+  { deep: "#090206", fog: "#240a18", base: "#6e173a", warp: "#b52d52", accent: "#ffba70" },
+  { deep: "#05020b", fog: "#1b0d33", base: "#4d1f91", warp: "#9e3ee0", accent: "#88e6ff" },
+  { deep: "#070403", fog: "#211209", base: "#733912", warp: "#b8581d", accent: "#ffe184" },
+];
+
+const LIGHT_PALETTES: WormholePalette[] = [
+  { deep: "#1c203b", fog: "#6c6396", base: "#4d599e", warp: "#9d7cc2", accent: "#ffd791" },
+  { deep: "#172930", fog: "#658f96", base: "#32707a", warp: "#68a8a4", accent: "#ffe8ad" },
+  { deep: "#2b1c30", fog: "#99708e", base: "#6e3d69", warp: "#b86b92", accent: "#ffdcb0" },
+  { deep: "#1d2438", fog: "#7987b8", base: "#425ca8", warp: "#8295db", accent: "#ffdf9e" },
+  { deep: "#2a201b", fog: "#9e8168", base: "#7a5338", warp: "#bf885a", accent: "#fff0ba" },
+];
+
+let mounted = false;
 
 export function mountSpaceWormhole(): void {
   const canvas = document.querySelector<HTMLCanvasElement>("[data-space-wormhole]");
   if (!canvas) return;
+  mounted = true;
+
+  const isDarkTheme = () => document.documentElement.classList.contains("dark");
+  let darkIndex = 0;
+  let lightIndex = 0;
+
+  const getInitialPalette = () =>
+    isDarkTheme() ? DARK_PALETTES[darkIndex] : LIGHT_PALETTES[lightIndex];
+  
+  const initial = getInitialPalette();
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reducedMotion) return;
-
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: "high-performance" });
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: false,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
   } catch {
     return;
   }
 
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  renderer.setPixelRatio(pixelRatio);
   renderer.setClearColor(0x03050b, 1);
 
   const scene = new THREE.Scene();
@@ -24,18 +66,35 @@ export function mountSpaceWormhole(): void {
   camera.position.z = 100;
 
   const tunnelUniforms = {
-    uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     uTime: { value: 0 },
     uWarp: { value: 0 },
-    uSpeed: { value: 0.45 },
-    uSwirl: { value: 0.0 },
-    uDensity: { value: 1.0 },
+    uSpeed: { value: 0.42 },
+    uSwirl: { value: 2.0 },
+    uDensity: { value: 1.05 },
     uSplit: { value: 0.0 },
     uPointer: { value: new THREE.Vector2(0, 0) },
-    uColorDeep: { value: new THREE.Color("#03040b") },
-    uColorBase: { value: new THREE.Color("#293d94") },
-    uColorWarp: { value: new THREE.Color("#8c38c7") },
-    uColorAccent: { value: new THREE.Color("#d9a13d") },
+    uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+    uColorDeep: { value: new THREE.Color(initial.deep) },
+    uColorFog: { value: new THREE.Color(initial.fog) },
+    uColorBase: { value: new THREE.Color(initial.base) },
+    uColorWarp: { value: new THREE.Color(initial.warp) },
+    uColorAccent: { value: new THREE.Color(initial.accent) },
+  };
+
+  const targetColors = {
+    deep: new THREE.Color(initial.deep),
+    fog: new THREE.Color(initial.fog),
+    base: new THREE.Color(initial.base),
+    warp: new THREE.Color(initial.warp),
+    accent: new THREE.Color(initial.accent),
+  };
+
+  const applyTargetPalette = (palette: WormholePalette) => {
+    targetColors.deep.set(palette.deep);
+    targetColors.fog.set(palette.fog);
+    targetColors.base.set(palette.base);
+    targetColors.warp.set(palette.warp);
+    targetColors.accent.set(palette.accent);
   };
 
   const quadGeo = new THREE.PlaneGeometry(2, 2);
@@ -50,36 +109,51 @@ export function mountSpaceWormhole(): void {
   const bgCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   bgScene.add(new THREE.Mesh(quadGeo, quadMat));
 
-  // Procedural starfield
-  const starCount = 500;
+  // Procedural twinkling stars
+  const starCount = 460;
   const starPositions = new Float32Array(starCount * 3);
   const starColors = new Float32Array(starCount * 3);
-  const palette = [
-    new THREE.Color(0xf4e6ca),
-    new THREE.Color(0x8eb5ff),
-    new THREE.Color(0xd9a13d),
-    new THREE.Color(0xffffff),
+  const starSizes = new Float32Array(starCount);
+  const starSeeds = new Float32Array(starCount);
+  const starPalette = [
+    new THREE.Color("#ffffff"),
+    new THREE.Color("#fff1d6"),
+    new THREE.Color("#ffd285"),
+    new THREE.Color('#d5b8ff'),
+    new THREE.Color("#9ec2ff"),
   ];
 
   for (let i = 0; i < starCount; i++) {
     const i3 = i * 3;
-    starPositions[i3] = (Math.random() - 0.5) * 900;
-    starPositions[i3 + 1] = (Math.random() - 0.5) * 600;
+    starPositions[i3] = (Math.random() - 0.5) * 960;
+    starPositions[i3 + 1] = (Math.random() - 0.5) * 650;
     starPositions[i3 + 2] = -Math.random() * 1400;
-    const c = palette[i % palette.length];
+    const c = starPalette[i % starPalette.length];
     starColors[i3] = c.r;
     starColors[i3 + 1] = c.g;
     starColors[i3 + 2] = c.b;
+    starSizes[i] = 1.6 + Math.random() * 2.8;
+    starSeeds[i] = Math.random();
   }
 
   const starGeo = new THREE.BufferGeometry();
   starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
   starGeo.setAttribute("color", new THREE.BufferAttribute(starColors, 3));
-  const starMat = new THREE.PointsMaterial({
-    size: 2.2,
-    vertexColors: true,
+  starGeo.setAttribute("aSize", new THREE.BufferAttribute(starSizes, 1));
+  starGeo.setAttribute("aSeed", new THREE.BufferAttribute(starSeeds, 1));
+
+  const starUniforms = {
+    uPixelRatio: { value: pixelRatio },
+    uTime: tunnelUniforms.uTime,
+    uWarp: tunnelUniforms.uWarp,
+    uFogColor: tunnelUniforms.uColorFog,
+  };
+
+  const starMat = new THREE.RawShaderMaterial({
+    uniforms: starUniforms,
+    vertexShader: starsVertex,
+    fragmentShader: starsFragment,
     transparent: true,
-    opacity: 0.85,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
@@ -96,16 +170,21 @@ export function mountSpaceWormhole(): void {
   const resize = () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
+    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(pr);
     renderer.setSize(width, height, false);
     tunnelUniforms.uResolution.value.set(width, height);
+    starUniforms.uPixelRatio.value = pr;
     camera.aspect = width / Math.max(1, height);
     camera.updateProjectionMatrix();
   };
 
+  const isFinePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   const onPointerMove = (e: PointerEvent) => {
+    if (!isFinePointer) return;
     targetPointer.set(
-      (e.clientX / Math.max(1, window.innerWidth) - 0.5) * 4,
-      -(e.clientY / Math.max(1, window.innerHeight) - 0.5) * 4,
+      (e.clientX / Math.max(1, window.innerWidth) - 0.5) * 2,
+      -(e.clientY / Math.max(1, window.innerHeight) - 0.5) * 2,
     );
   };
 
@@ -114,21 +193,49 @@ export function mountSpaceWormhole(): void {
     warpTarget = 1;
   };
 
+  const onPageLoad = () => {
+    overrideWarp = null;
+    warpTarget = 0;
+  };
+
+  const onThemeSync = () => {
+    const palette = isDarkTheme() ? DARK_PALETTES[darkIndex] : LIGHT_PALETTES[lightIndex];
+    applyTargetPalette(palette);
+  };
+
+  const onShuffle = () => {
+    if (isDarkTheme()) {
+      darkIndex = (darkIndex + 1) % DARK_PALETTES.length;
+      applyTargetPalette(DARK_PALETTES[darkIndex]);
+    } else {
+      lightIndex = (lightIndex + 1) % LIGHT_PALETTES.length;
+      applyTargetPalette(LIGHT_PALETTES[lightIndex]);
+    }
+  };
+
   const animate = (now: number) => {
     if (disposed) return;
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
 
-    if (!paused) {
+    if (!paused && !reducedMotion) {
       tunnelUniforms.uTime.value += dt;
     }
 
-    const activeWarp = overrideWarp ?? warpTarget;
-    tunnelUniforms.uWarp.value += (activeWarp - tunnelUniforms.uWarp.value) * Math.min(1, dt * 6);
-    tunnelUniforms.uPointer.value.lerp(targetPointer, Math.min(1, dt * 4));
+    // Smooth color transitions for theme toggle and shuffle
+    const colorRate = Math.min(1, dt * 2.4);
+    tunnelUniforms.uColorDeep.value.lerp(targetColors.deep, colorRate);
+    tunnelUniforms.uColorFog.value.lerp(targetColors.fog, colorRate);
+    tunnelUniforms.uColorBase.value.lerp(targetColors.base, colorRate);
+    tunnelUniforms.uColorWarp.value.lerp(targetColors.warp, colorRate);
+    tunnelUniforms.uColorAccent.value.lerp(targetColors.accent, colorRate);
 
-    if (!paused) {
-      const speed = 45 + tunnelUniforms.uWarp.value * 950;
+    const activeWarp = overrideWarp ?? warpTarget;
+    tunnelUniforms.uWarp.value += (activeWarp - tunnelUniforms.uWarp.value) * Math.min(1, dt * 5);
+    tunnelUniforms.uPointer.value.lerp(targetPointer, Math.min(1, dt * 4)); 
+
+    if (!paused && !reducedMotion) {
+      const speed = 42 + tunnelUniforms.uWarp.value * 950;
       const pos = starGeo.getAttribute("position") as THREE.BufferAttribute;
       for (let i = 0; i < starCount; i++) {
         let z = pos.getZ(i) + speed * dt;
@@ -147,24 +254,30 @@ export function mountSpaceWormhole(): void {
     renderer.render(bgScene, bgCamera);
     renderer.render(scene, camera);
 
-    rafId = requestAnimationFrame(animate);
+    if (!reducedMotion) {
+      rafId = requestAnimationFrame(animate);
+    }
   };
 
-// --- DEV-ONLY SHADER TUNER (stripped completely in `npm run build`) ---
+  // DEV SHADER TUNER (stripped completely in `npm run build`)
   let devHud: { dispose: () => void } | null = null;
   if (import.meta.env.DEV) {
     devHud = createDevHud(tunnelUniforms, {
       onWarpChange: (v) => { overrideWarp = v; },
       onPauseToggle: (isPaused) => { paused = isPaused; },
     });
-
+    
     if (import.meta.hot) {
       import.meta.hot.accept(
-        ["./wormhole.vert?raw", "./wormhole.frag?raw"],
-        ([vertMod, fragMod]) => {
-          if (vertMod) quadMat.vertexShader = vertMod.default;
-          if (fragMod) quadMat.fragmentShader = fragMod.default;
-          quadMat.needsUpdate = true;
+        ["./wormhole.vert?raw", "./wormhole.frag?raw", "./stars.vert?raw", "./stars.frag?raw"],
+        ([wVert, wFrag, sVert, sFrag]) => {
+          if (wVert) quadMat.vertexShader = wVert.default;
+          if (wFrag) quadMat.fragmentShader = wFrag.default;
+          if (wVert || wFrag) quadMat.needsUpdate = true;
+
+          if (sVert) starMat.vertexShader = sVert.default;
+          if (sFrag) starMat.fragmentShader = sFrag.default;
+          if (sVert || sFrag) starMat.needsUpdate = true;
         },
       );
     }
@@ -189,8 +302,15 @@ export function mountSpaceWormhole(): void {
   window.addEventListener("resize", resize, { passive: true });
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   window.addEventListener("shlongeeland:warp", onWarp);
-  window.addEventListener("pagehide", dispose, { once: true });
-  rafId = requestAnimationFrame(animate);
+  window.addEventListener("shlongeeland:theme", onThemeSync);
+  window.addEventListener("shlongeeland:shuffle", onShuffle);
+  document.addEventListener("astro:page-load", onPageLoad);
+
+  if (reducedMotion) {
+    requestAnimationFrame(animate);
+  } else {
+    rafId = requestAnimationFrame(animate);
+  }
 }
 
 const css = String.raw;

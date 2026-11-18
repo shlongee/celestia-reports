@@ -1,22 +1,15 @@
 ---
-import Navigation from './Navigation.astro'
-import Menu from './Menu.astro'
-import ThemeIcon from './ThemeIcon.astro';
+import Navigation from "./Navigation.astro";
+import Menu from "./Menu.astro";
+import ArcaneControls from "./ArcaneControls.astro";
 ---
 
 <header>
-    <nav>
-        <div>
-            <ThemeIcon />
-            <Menu />
-        </div>
-        <Navigation />
-    </nav>
+  <nav>
+    <div class="header-tools">
+      <ArcaneControls showCrystal />
+      <Menu />
+    </div>
+    <Navigation />
+  </nav>
 </header>
-
-<style>
-    div {
-        display: flex;
-        justify-content: space-between;
-    }
-</style>
