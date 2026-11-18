@@ -229,33 +229,6 @@ function easeInQuad(value: number) {
   return value * value;
 }
 
-const HOME_SUPPRESSION_MARKER = "data-tempus-home-suppression";
-
-function ensureHomeSuppressionStyle(frameDocument: Document) {
-  if (
-    frameDocument.readyState === "loading" ||
-    frameDocument.querySelector(`style[${HOME_SUPPRESSION_MARKER}]`)
-  ) {
-    return;
-  }
-
-  const style = frameDocument.createElement("style");
-  style.setAttribute(HOME_SUPPRESSION_MARKER, "");
-  style.textContent = `
-    .content > h1,
-    .content > p,
-    #hyper-btn {
-      display: none !important;
-    }
-  `;
-  (frameDocument.head || frameDocument.documentElement).append(style);
-}
-
-function hideUpstreamTitle(frame: HTMLIFrameElement | null) {
-  const frameDocument = frame?.contentDocument;
-  if (frameDocument) ensureHomeSuppressionStyle(frameDocument);
-}
-
 async function loadFont() {
   if (!document.fonts) return;
   await Promise.all([
@@ -269,26 +242,17 @@ type TravelEffects = {
   start: () => void;
 };
 
-function setupHyperTravel(
-  frame: HTMLIFrameElement | null,
-  link: HTMLAnchorElement | null,
-  effects: TravelEffects,
-) {
-  let travelButton: HTMLButtonElement | null = null;
+function setupWarpLinks(effects: TravelEffects) {
   let navigationTimer = 0;
-  let bindingRetryDocument: Document | null = null;
   let navigating = false;
-  let disposed = false;
 
-  const clearNavigation = () => {
-    if (navigationTimer) window.clearTimeout(navigationTimer);
-    navigationTimer = 0;
-  };
-  const navigate = () => {
-    if (link) window.location.assign(link.href);
-  };
-  const onTravel = (event: MouseEvent) => {
+  const onLinkClick = (event: MouseEvent) => {
+    const target = event.target as Element | null;
+    const link = target?.closest<HTMLAnchorElement>("a[data-warp-link]");
     if (
+      !link ||
+      !link.href ||
+      link.target === "_blank" ||
       event.defaultPrevented ||
       event.button !== 0 ||
       event.metaKey ||
@@ -300,69 +264,31 @@ function setupHyperTravel(
     }
 
     event.preventDefault();
-    if (navigating || !link) return;
+    if (navigating) return;
     navigating = true;
 
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reducedMotion) {
-      navigate();
+      window.location.assign(link.href);
       return;
     }
 
-    try {
-      // The iframe animation and the particle outro are independent. Do not
-      // skip the iframe animation just because WebGL particles are still
-      // initializing on the parent page.
-      travelButton?.click();
-      if (effects.ready) effects.start();
-      navigationTimer = window.setTimeout(navigate, 2500);
-    } catch {
-      navigate();
-    }
-  };
-  const cancelBindingRetry = () => {
-    bindingRetryDocument?.removeEventListener("readystatechange", bindButton);
-    bindingRetryDocument = null;
-  };
-  const bindButton = () => {
-    cancelBindingRetry();
-    if (disposed) return;
-
-    try {
-      const frameDocument = frame?.contentDocument;
-      if (!frameDocument) return;
-
-      if (frameDocument.readyState === "loading") {
-        bindingRetryDocument = frameDocument;
-        bindingRetryDocument.addEventListener("readystatechange", bindButton, {
-          once: true,
-        });
-        return;
-      }
-
-      ensureHomeSuppressionStyle(frameDocument);
-      travelButton =
-        frameDocument.querySelector<HTMLButtonElement>("#hyper-btn") || null;
-    } catch {
-      travelButton = null;
-    }
-  };
-  const dispose = () => {
-    if (disposed) return;
-    disposed = true;
-    clearNavigation();
-    cancelBindingRetry();
-    link?.removeEventListener("click", onTravel);
-    frame?.removeEventListener("load", bindButton);
+    window.dispatchEvent(new CustomEvent("shlongeeland:warp"));
+    if (effects.ready) effects.start();
+    navigationTimer = window.setTimeout(() => {
+      window.location.assign(link.href);
+    }, 650);
   };
 
-  link?.addEventListener("click", onTravel);
-  frame?.addEventListener("load", bindButton);
-  window.addEventListener("pagehide", dispose, { once: true });
-  bindButton();
-  return dispose;
+  document.addEventListener("click", onLinkClick);
+  window.addEventListener(
+    "pagehide",
+    () => {
+      if (navigationTimer) window.clearTimeout(navigationTimer);
+      document.removeEventListener("click", onLinkClick);
+    },
+    { once: true },
+  );
 }
 
 function makeTitleSource(title: string, width: number, height: number) {
@@ -448,14 +374,9 @@ async function initTitleParticles() {
     "[data-title-particles]",
   );
   const fallback = document.querySelector<HTMLElement>("[data-title-fallback]");
-  const frame = document.querySelector<HTMLIFrameElement>(
-    "[data-wormhole-frame]",
-  );
-  const travelLink = document.querySelector<HTMLAnchorElement>(
-    "[data-hyper-travel]",
-  );
+
   const travelEffects: TravelEffects = { ready: false, start: () => {} };
-  setupHyperTravel(frame, travelLink, travelEffects);
+  setupWarpLinks(travelEffects);
   if (!canvas || !fallback) return;
 
   const showFallback = () => {
@@ -516,7 +437,6 @@ async function initTitleParticles() {
   let animationFrame = 0;
   let resizeFrame = 0;
   let disposed = false;
-  let frameDocument: Document | null = null;
   let targetParticleSize = 1.2;
   let outro: {
     startedAt: number;
@@ -537,12 +457,6 @@ async function initTitleParticles() {
   };
   travelEffects.start = startDisintegration;
 
-  const removeFrameListeners = () => {
-    frameDocument?.removeEventListener("pointermove", relayFramePointer);
-    frameDocument?.removeEventListener("pointerleave", clearPointer);
-    frameDocument = null;
-  };
-
   const pointerToTouch = (clientX: number, clientY: number) => {
     const bounds = canvas.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
@@ -557,32 +471,6 @@ async function initTitleParticles() {
   function clearPointer() {
     touchTexture.resetStroke();
   }
-  function relayFramePointer(event: PointerEvent) {
-    const bounds = frame?.getBoundingClientRect();
-    const frameWindow = frame?.contentWindow;
-    if (!bounds) return;
-    const scaleX = bounds.width / (frameWindow?.innerWidth || bounds.width);
-    const scaleY = bounds.height / (frameWindow?.innerHeight || bounds.height);
-    pointerToTouch(
-      bounds.left + event.clientX * scaleX,
-      bounds.top + event.clientY * scaleY,
-    );
-  }
-  const bindFrame = () => {
-    removeFrameListeners();
-    try {
-      frameDocument = frame?.contentDocument || null;
-      hideUpstreamTitle(frame);
-      frameDocument?.addEventListener("pointermove", relayFramePointer, {
-        passive: true,
-      });
-      frameDocument?.addEventListener("pointerleave", clearPointer, {
-        passive: true,
-      });
-    } catch {
-      frameDocument = null;
-    }
-  };
 
   const rebuild = () => {
     if (disposed) return;
@@ -680,8 +568,6 @@ async function initTitleParticles() {
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerleave", clearPointer);
     window.removeEventListener("resize", onResize);
-    frame?.removeEventListener("load", bindFrame);
-    removeFrameListeners();
     mesh?.geometry.dispose();
     material.dispose();
     sourceTexture?.dispose();
@@ -692,14 +578,12 @@ async function initTitleParticles() {
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   window.addEventListener("pointerleave", clearPointer, { passive: true });
   window.addEventListener("resize", onResize, { passive: true });
-  frame?.addEventListener("load", bindFrame);
   window.addEventListener("pagehide", dispose, { once: true });
 
   try {
     await loadFont();
     if (disposed) return;
     rebuild();
-    bindFrame();
     fallback.dataset.visible = "false";
     animationFrame = requestAnimationFrame(render);
     travelEffects.ready = true;

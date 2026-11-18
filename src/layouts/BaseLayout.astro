@@ -1,68 +1,40 @@
 ---
+import { Font } from "astro:assets";
 import "../styles/global.css";
-import Seo, { type BookSeoData } from "../components/Seo.astro";
-import type { Locale } from "../data/books";
+import Seo from "../components/Seo.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
 
 export interface Props {
   title: string;
   description: string;
-  locale: Locale;
-  path: string;
-  alternatePaths: Record<Locale, string>;
-  image?: string;
-  imageAlt?: string;
-  ogType?: "website" | "book";
-  book?: BookSeoData;
   immersive?: boolean;
-  bookPage?: boolean;
-  showLocaleSwitch?: boolean;
+  ogType?: "website" | "article";
+  pubDate?: Date;
 }
 
 const {
   title,
   description,
-  locale,
-  path,
-  alternatePaths,
-  image,
-  imageAlt,
-  ogType,
-  book,
   immersive = false,
-  bookPage = false,
-  showLocaleSwitch = !immersive,
+  ogType = "website",
+  pubDate,
 } = Astro.props;
-const alternateLocale: Locale = locale === "es" ? "en" : "es";
 ---
+
 <!doctype html>
-<html lang={locale} class:list={{ immersive, "book-page": bookPage }}>
+<html lang="en" class:list={{ immersive }}>
   <head>
     <meta charset="UTF-8" />
-    <Seo
-      title={title}
-      description={description}
-      path={path}
-      alternatePaths={alternatePaths}
-      image={image}
-      imageAlt={imageAlt}
-      locale={locale}
-      ogType={ogType}
-      book={book}
-    />
+    <Font cssVariable="--zyzol" preload />
+    <Seo title={title} description={description} ogType={ogType} pubDate={pubDate} />
     <slot name="head" />
   </head>
-  <body class:list={{ immersive, "book-page": bookPage }}>
-    {showLocaleSwitch && (
-          <a
-            class="locale-switch"
-            href={alternatePaths[alternateLocale]}
-            lang={alternateLocale}
-            hreflang={alternateLocale}
-            aria-label={locale === "es" ? "Leer en inglés" : "Read in Spanish"}
-          >
-            {locale === "es" ? "EN" : "ES"}
-          </a>
-    )}
-    <main><slot /></main>
+  <body class:list={{ immersive }}>
+    {!immersive && <Header />}
+    <main class:list={{ "site-main": !immersive }}>
+      <slot />
+    </main>
+    {!immersive && <Footer />}
   </body>
 </html>

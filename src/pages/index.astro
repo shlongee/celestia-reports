@@ -1,18 +1,33 @@
 ---
+import BaseLayout from "../layouts/BaseLayout.astro";
 ---
-<!doctype html>
-<html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex,follow" />
-    <meta http-equiv="refresh" content="0;url=/es/" />
-    <title>Example template</title>
-    <link rel="canonical" href="/es/" />
-  </head>
-  <body>
-    <main>
-      <p><a href="/es/">Enter the example template</a></p>
-    </main>
-  </body>
-</html>
+
+<BaseLayout
+  title="Shlongeeland"
+  description="Programming journey, graphics experiments, and dev reports by Shlongee."
+  immersive
+>
+  <section class="wormhole-home" aria-label="Shlongeeland">
+    <canvas class="wormhole-home__bg" data-space-wormhole aria-hidden="true"></canvas>
+
+    <div class="title-particles" aria-hidden="true">
+      <canvas data-title-particles data-title="SHLONGEELAND"></canvas>
+    </div>
+
+    <h1 class="title-particles__fallback" data-title-fallback data-title="SHLONGEELAND">
+      SHLONGEELAND
+    </h1>
+
+    <nav class="wormhole-home__nav" aria-label="Primary navigation">
+      <a class="wormhole-nav__btn wormhole-nav__btn--primary" data-warp-link href="/blog/">Blog</a>
+      <a class="wormhole-nav__btn" data-warp-link href="/tags/">Tags</a>
+      <a class="wormhole-nav__btn" data-warp-link href="/about/">About</a>
+    </nav>
+  </section>
+</BaseLayout>
+
+<script>
+  import { mountSpaceWormhole } from "../scripts/space-wormhole";
+  mountSpaceWormhole();
+</script>
+<script src="../scripts/title-particles.ts"></script>

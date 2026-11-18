@@ -2,10 +2,10 @@
 title: "Report #1: Building Mip-Chain Bloom & Taming 8-Bit Banding"
 description: "What I learned implementing Jimenez 13-tap bloom in Raylib, profiling on Intel UHD, and why float16 fixes hard glow rims."
 pubDate: 2026-11-15
+tags: ["graphics", "shaders", "raylib", "hdr", "bloom"]
 ---
 
 import Float16Visualizer from '../../components/Float16Visualizer.astro';
-import bloomCompare from '../../assets/reports/01-bloom/hdr-vs-ldr.png';
 
 *Dear Princess Celestia,*
 
@@ -35,5 +35,3 @@ Explain fixed `1/255` quantization vs. `float16` (`sign + 5-bit exponent + 10-bi
 * Bloom cost on Intel UHD Graphics at 720p: **~0.52 ms** (`+10.8 MB/frame`)
 * `R16G16B16A16` HDR cost over `R8G8B8A8`: **~0.08 ms/frame** (`+1.7` to `+5.1 MB/frame`, depending on whether `canvas` is kept 8-bit hybrid!)
 * Next experiment: `R11G11B10_FLOAT` for 32-bit HDR mipmaps.
-
-```
