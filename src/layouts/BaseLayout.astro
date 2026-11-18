@@ -26,15 +26,35 @@ const {
 <html lang="en" class:list={{ immersive }}>
   <head>
     <meta charset="UTF-8" />
-    <Font cssVariable="--zyzol" preload />
+    <Font cssVariable="--kejter" preload />
     <Seo title={title} description={description} ogType={ogType} pubDate={pubDate} />
     <slot name="head" />
   </head>
   <body class:list={{ immersive }}>
-    {!immersive && <Header />}
-    <main class:list={{ "site-main": !immersive }}>
-      <slot />
-    </main>
-    {!immersive && <Footer />}
+    <canvas class="wormhole-global-bg" data-space-wormhole aria-hidden="true"></canvas>
+    <div class="viewport-vignette" aria-hidden="true"></div>
+
+    {immersive ? (
+      <main>
+        <slot />
+      </main>
+    ) : (
+      <div class="codex-shell">
+        <div class="codex-sheet">
+          <Header />
+          <main class="site-main">
+            <slot />
+          </main>
+          <Footer />
+        </div>
+      </div>
+    )}
+
+    <script>
+      import { mountSpaceWormhole } from "../scripts/space-wormhole";
+      import { mountCursorGlow } from "../scripts/cursor-glow";
+      mountSpaceWormhole();
+      mountCursorGlow();
+    </script>
   </body>
 </html>

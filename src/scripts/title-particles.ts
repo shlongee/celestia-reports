@@ -9,115 +9,8 @@ const CAMERA_FOV = 50;
 const MAX_SOURCE_WIDTH = 1024;
 const MAX_SOURCE_HEIGHT = 576;
 
-const vertexShader = /* glsl */ `
-precision highp float;
-
-attribute vec3 position;
-attribute vec2 uv;
-attribute float pindex;
-attribute vec2 offset;
-attribute float angle;
-
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
-uniform float uTime;
-uniform float uRandom;
-uniform float uDepth;
-uniform float uSize;
-uniform vec2 uTextureSize;
-uniform sampler2D uTexture;
-uniform sampler2D uTouch;
-
-varying vec2 vPUv;
-varying vec2 vUv;
-
-float random(float n) {
-  return fract(sin(n) * 43758.5453123);
-}
-
-vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec3 permute(vec3 x) { return mod289(((x * 34.0) + 1.0) * x); }
-
-float snoise2(vec2 v) {
-  const vec4 C = vec4(
-    0.211324865405187,
-    0.366025403784439,
-   -0.577350269189626,
-    0.024390243902439
-  );
-  vec2 i = floor(v + dot(v, C.yy));
-  vec2 x0 = v - i + dot(i, C.xx);
-  vec2 i1 = x0.x > x0.y ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
-  vec4 x12 = x0.xyxy + C.xxzz;
-  x12.xy -= i1;
-  i = mod289(i);
-  vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0))
-    + i.x + vec3(0.0, i1.x, 1.0));
-  vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy),
-    dot(x12.zw, x12.zw)), 0.0);
-  m = m * m;
-  m = m * m;
-  vec3 x = 2.0 * fract(p * C.www) - 1.0;
-  vec3 h = abs(x) - 0.5;
-  vec3 ox = floor(x + 0.5);
-  vec3 a0 = x - ox;
-  m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
-  vec3 g;
-  g.x = a0.x * x0.x + h.x * x0.y;
-  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-  return 130.0 * dot(m, g);
-}
-
-void main() {
-  vUv = uv;
-  vec2 puv = offset / uTextureSize;
-  vPUv = puv;
-
-  vec4 color = texture2D(uTexture, puv);
-  float grey = color.r * 0.21 + color.g * 0.71 + color.b * 0.07;
-  vec3 displaced = vec3(offset, 0.0);
-
-  displaced.xy += vec2(
-    random(pindex) - 0.5,
-    random(offset.x + pindex) - 0.5
-  ) * uRandom;
-
-  float rndz = random(pindex) + snoise2(vec2(pindex * 0.1, uTime * 0.1));
-  displaced.z += rndz * (random(pindex) * 2.0 * uDepth);
-
-  float touch = texture2D(uTouch, puv).r;
-  displaced.x += cos(angle) * touch * 20.0 * rndz;
-  displaced.y += sin(angle) * touch * 20.0 * rndz;
-  displaced.z += touch * 20.0 * rndz;
-
-  float particleSize = (snoise2(vec2(uTime, pindex) * 0.5) + 2.0)
-    * max(grey, 0.2) * uSize;
-  displaced.xy += position.xy * particleSize;
-
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
-}
-`;
-
-const fragmentShader = /* glsl */ `
-precision highp float;
-
-uniform sampler2D uTexture;
-varying vec2 vPUv;
-varying vec2 vUv;
-
-void main() {
-  vec4 color = texture2D(uTexture, vPUv);
-  float grey = color.r * 0.21 + color.g * 0.71 + color.b * 0.07;
-
-  float border = 0.3;
-  float radius = 0.5;
-  float dist = radius - distance(vUv, vec2(0.5));
-  float alpha = smoothstep(0.0, border, dist);
-
-  gl_FragColor = vec4(vec3(grey), alpha);
-}
-`;
+import vertexShader from "./title-particles.vert?raw";
+import fragmentShader from "./title-particles.frag?raw";
 
 type TouchPoint = {
   x: number;
@@ -229,12 +122,14 @@ function easeInQuad(value: number) {
   return value * value;
 }
 
-async function loadFont() {
+async function loadFont(fontFamily: string) {
   if (!document.fonts) return;
-  await Promise.all([
-    document.fonts.ready,
-    document.fonts.load('700 100px Georgia, "Times New Roman", serif'),
-  ]);
+  await document.fonts.ready;
+  try {
+    await document.fonts.load(`700 100px ${fontFamily}`);
+  } catch {
+    // Fall back gracefully if the browser already resolved the preloaded font
+  }
 }
 
 type TravelEffects = {
@@ -291,7 +186,12 @@ function setupWarpLinks(effects: TravelEffects) {
   );
 }
 
-function makeTitleSource(title: string, width: number, height: number) {
+function makeTitleSource(
+  title: string,
+  width: number,
+  height: number,
+  fontFamily: string,
+) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -301,13 +201,13 @@ function makeTitleSource(title: string, width: number, height: number) {
   context.fillStyle = "black";
   context.fillRect(0, 0, width, height);
   let fontSize = Math.min(height * 0.8, width * 0.15);
-  context.font = `700 ${fontSize}px Georgia, "Times New Roman", serif`;
+  context.font = `700 ${fontSize}px ${fontFamily}`;
   context.letterSpacing = `${fontSize * 0.035}px`;
   const maximumWidth = width * 0.88;
   const measuredWidth = context.measureText(title).width;
   if (measuredWidth > maximumWidth) fontSize *= maximumWidth / measuredWidth;
 
-  context.font = `700 ${fontSize}px Georgia, "Times New Roman", serif`;
+  context.font = `700 ${fontSize}px ${fontFamily}`;
   context.letterSpacing = `${fontSize * 0.035}px`;
   context.textAlign = "center";
   context.textBaseline = "middle";
@@ -374,10 +274,11 @@ async function initTitleParticles() {
     "[data-title-particles]",
   );
   const fallback = document.querySelector<HTMLElement>("[data-title-fallback]");
-
   const travelEffects: TravelEffects = { ready: false, start: () => {} };
   setupWarpLinks(travelEffects);
   if (!canvas || !fallback) return;
+
+  const fontFamily = getComputedStyle(fallback).fontFamily || "sans-serif";
 
   const showFallback = () => {
     fallback.dataset.visible = "true";
@@ -428,6 +329,17 @@ async function initTitleParticles() {
     transparent: true,
     depthTest: false,
   });
+
+  if (import.meta.env.DEV && import.meta.hot) {
+    import.meta.hot.accept(
+      ["./title-particles.vert?raw", "./title-particles.frag?raw"],
+      ([vertMod, fragMod]) => {
+        if (vertMod) material.vertexShader = vertMod.default;
+        if (fragMod) material.fragmentShader = fragMod.default;
+        material.needsUpdate = true;
+      },
+    );
+  }
 
   let mesh: THREE.Mesh<
     THREE.InstancedBufferGeometry,
@@ -495,7 +407,7 @@ async function initTitleParticles() {
     else targetParticleSize = 1.2;
     const sourceWidth = Math.max(1, Math.round(visibleWidth * sourceScale));
     const sourceHeight = Math.max(1, Math.round(visibleHeight * sourceScale));
-    const source = makeTitleSource(title, sourceWidth, sourceHeight);
+    const source = makeTitleSource(title, sourceWidth, sourceHeight, fontFamily);
     const geometry = makeGeometry(source.pixels, sourceWidth, sourceHeight);
     const texture = new THREE.CanvasTexture(source.canvas);
     texture.minFilter = THREE.LinearFilter;
@@ -581,7 +493,7 @@ async function initTitleParticles() {
   window.addEventListener("pagehide", dispose, { once: true });
 
   try {
-    await loadFont();
+    await loadFont(fontFamily);
     if (disposed) return;
     rebuild();
     fallback.dataset.visible = "false";
