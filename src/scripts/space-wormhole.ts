@@ -13,27 +13,24 @@ interface WormholePalette {
 }
 
 const DARK_PALETTES: WormholePalette[] = [
-  { deep: "#03040b", fog: "#0b122b", base: "#23378c", warp: "#7b32bd", accent: "#d9a13d" },
-  { deep: "#020808", fog: "#082221", base: "#0f5951", warp: "#2a8c82", accent: "#9bf2ca" },
-  { deep: "#090206", fog: "#240a18", base: "#6e173a", warp: "#b52d52", accent: "#ffba70" },
-  { deep: "#05020b", fog: "#1b0d33", base: "#4d1f91", warp: "#9e3ee0", accent: "#88e6ff" },
-  { deep: "#070403", fog: "#211209", base: "#733912", warp: "#b8581d", accent: "#ffe184" },
+  { deep: "#02060d", fog: "#071a26", base: "#18e08d", warp: "#1ab8e8", accent: "#c84dff" },
+  { deep: "#03070e", fog: "#091d2b", base: "#24f0a8", warp: "#4b82ff", accent: "#ff5ea8" },
+  { deep: "#050312", fog: "#130d2e", base: "#1ed6b8", warp: "#6f4dff", accent: "#ff478a" },
+  { deep: "#020806", fog: "#08211b", base: "#3ef27a", warp: "#17c9c3", accent: "#9e5eff" },
+  { deep: "#040610", fog: "#0d1a2e", base: "#20e39e", warp: "#2bb5ff", accent: "#ff8ce0" },
 ];
 
 const LIGHT_PALETTES: WormholePalette[] = [
-  { deep: "#1c203b", fog: "#6c6396", base: "#4d599e", warp: "#9d7cc2", accent: "#ffd791" },
-  { deep: "#172930", fog: "#658f96", base: "#32707a", warp: "#68a8a4", accent: "#ffe8ad" },
-  { deep: "#2b1c30", fog: "#99708e", base: "#6e3d69", warp: "#b86b92", accent: "#ffdcb0" },
-  { deep: "#1d2438", fog: "#7987b8", base: "#425ca8", warp: "#8295db", accent: "#ffdf9e" },
-  { deep: "#2a201b", fog: "#9e8168", base: "#7a5338", warp: "#bf885a", accent: "#fff0ba" },
+  { deep: "#1b2b3d", fog: "#6c8ba6", base: "#3df2ad", warp: "#4fd6ff", accent: "#eb8cff" },
+  { deep: "#212842", fog: "#7983ad", base: "#52f0c3", warp: "#73a8ff", accent: "#ff9ec7" },
+  { deep: "#182d36", fog: "#67969e", base: "#47eb8f", warp: "#5be0e6", accent: "#c799ff" },
+  { deep: "#20273d", fog: "#7d88a8", base: "#3ae6c1", warp: "#6eb5ff", accent: "#ffa6b8" },
+  { deep: "#28223b", fog: "#877da6", base: "#4de8a5", warp: "#66c7ff", accent: "#ffba94" },
 ];
-
-let mounted = false;
 
 export function mountSpaceWormhole(): void {
   const canvas = document.querySelector<HTMLCanvasElement>("[data-space-wormhole]");
   if (!canvas) return;
-  mounted = true;
 
   const isDarkTheme = () => document.documentElement.classList.contains("dark");
   let darkIndex = 0;
@@ -116,11 +113,11 @@ export function mountSpaceWormhole(): void {
   const starSizes = new Float32Array(starCount);
   const starSeeds = new Float32Array(starCount);
   const starPalette = [
-    new THREE.Color("#ffffff"),
-    new THREE.Color("#fff1d6"),
-    new THREE.Color("#ffd285"),
-    new THREE.Color('#d5b8ff'),
-    new THREE.Color("#9ec2ff"),
+    new THREE.Color(0xe8fff8),
+    new THREE.Color(0x9be7ff),
+    new THREE.Color(0x9effcf),
+    new THREE.Color(0xffffff),
+    new THREE.Color(0xe6b8ff),
   ];
 
   for (let i = 0; i < starCount; i++) {
@@ -157,7 +154,8 @@ export function mountSpaceWormhole(): void {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
-  scene.add(new THREE.Points(starGeo, starMat));
+  const stars = new THREE.Points(starGeo, starMat);
+  scene.add(stars);
 
   const targetPointer = new THREE.Vector2();
   let warpTarget = 0;
@@ -201,6 +199,7 @@ export function mountSpaceWormhole(): void {
   const onThemeSync = () => {
     const palette = isDarkTheme() ? DARK_PALETTES[darkIndex] : LIGHT_PALETTES[lightIndex];
     applyTargetPalette(palette);
+    devHud?.syncFromTargets();
   };
 
   const onShuffle = () => {
@@ -211,9 +210,13 @@ export function mountSpaceWormhole(): void {
       lightIndex = (lightIndex + 1) % LIGHT_PALETTES.length;
       applyTargetPalette(LIGHT_PALETTES[lightIndex]);
     }
+    devHud?.syncFromTargets();
   };
 
   const animate = (now: number) => {
+    let fpsFrames = 0;
+    let fpsLast = performance.now();
+
     if (disposed) return;
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
@@ -257,15 +260,38 @@ export function mountSpaceWormhole(): void {
     if (!reducedMotion) {
       rafId = requestAnimationFrame(animate);
     }
+
+    if (devHud) {
+      fpsFrames += 1;
+      if (now - fpsLast >= 500) {
+        devHud.updateFps(Math.round((fpsFrames * 1000) / (now - fpsLast)));
+        fpsFrames = 0;
+        fpsLast = now;
+      }
+    }
   };
 
   // DEV SHADER TUNER (stripped completely in `npm run build`)
-  let devHud: { dispose: () => void } | null = null;
+  let devHud: {
+  dispose: () => void;
+  syncFromTargets: () => void;
+  updateFps: (fps: number) => void;
+  } | null = null;
   if (import.meta.env.DEV) {
-    devHud = createDevHud(tunnelUniforms, {
-      onWarpChange: (v) => { overrideWarp = v; },
-      onPauseToggle: (isPaused) => { paused = isPaused; },
-    });
+     devHud = createDevHud(tunnelUniforms, targetColors, {
+       onWarpChange: (v) => { overrideWarp = v; },
+       onPauseToggle: (isPaused) => { paused = isPaused; },
+       onStarsToggle: (visible) => { stars.visible = visible; },
+       onShuffle,
+       onReset: () => {
+         tunnelUniforms.uSpeed.value = 0.42;
+         tunnelUniforms.uSwirl.value = 2.0;
+         tunnelUniforms.uDensity.value = 1.05;
+         tunnelUniforms.uSplit.value = 0.0;
+         overrideWarp = null;
+         onThemeSync();
+       },
+     });
     
     if (import.meta.hot) {
       import.meta.hot.accept(
@@ -322,15 +348,26 @@ function createDevHud(
     uDensity: { value: number };
     uSplit: { value: number };
     uColorDeep: { value: THREE.Color };
+    uColorFog: { value: THREE.Color };
     uColorBase: { value: THREE.Color };
     uColorWarp: { value: THREE.Color };
     uColorAccent: { value: THREE.Color };
   },
+  targetColors: {
+    deep: THREE.Color;
+    fog: THREE.Color;
+    base: THREE.Color;
+    warp: THREE.Color;
+    accent: THREE.Color;
+  },
   callbacks: {
     onWarpChange: (value: number | null) => void;
     onPauseToggle: (paused: boolean) => void;
+    onStarsToggle: (visible: boolean) => void;
+    onShuffle: () => void;
+    onReset: () => void;
   },
-): { dispose: () => void } {
+) {
   const STORAGE_KEY = "shlongeeland-devhud-state";
   const controller = new AbortController();
   const { signal } = controller;
@@ -356,7 +393,7 @@ function createDevHud(
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
-      // Ignore storage errors in private/restricted contexts
+      // Ignore storage errors
     }
   };
 
@@ -366,29 +403,37 @@ function createDevHud(
     top: ${state.y}px;
     left: ${state.x}px;
     z-index: 9999;
-    width: 260px;
+    width: 272px;
     border-radius: 10px;
-    background: rgba(10, 12, 20, 0.88);
+    background: rgba(10, 12, 20, 0.9);
     color: #eee;
     border: 1px solid rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(10px);
     font: 12px/1.4 monospace;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
     overflow: hidden;
   `;
 
-  // --- Draggable Header ---
+  // --- Draggable Header + FPS Badge ---
   const header = document.createElement("div");
   header.style.cssText = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
+    gap: 8px;
+    padding: 8px 10px;
     cursor: grab;
     user-select: none;
     touch-action: none;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.06);
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  `;
+
+  const titleWrap = document.createElement("div");
+  titleWrap.style.cssText = css`
+    display: flex;
+    align-items: center;
+    gap: 8px;
   `;
 
   const title = document.createElement("span");
@@ -396,8 +441,20 @@ function createDevHud(
   title.style.cssText = css`
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: #f4e6ca;
+    color: #9effcf;
   `;
+
+  const fpsBadge = document.createElement("span");
+  fpsBadge.textContent = "-- fps";
+  fpsBadge.style.cssText = css`
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #9be7ff;
+  `;
+
+  titleWrap.append(title, fpsBadge);
 
   const minimizeBtn = document.createElement("button");
   minimizeBtn.type = "button";
@@ -407,14 +464,14 @@ function createDevHud(
     height: 24px;
     padding: 0;
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     background: rgba(255, 255, 255, 0.08);
     color: #eee;
     font: 700 14px/1 monospace;
     cursor: pointer;
   `;
 
-  header.append(title, minimizeBtn);
+  header.append(titleWrap, minimizeBtn);
 
   // --- Collapsible Body ---
   const body = document.createElement("div");
@@ -455,9 +512,7 @@ function createDevHud(
     { signal },
   );
 
-  // --- Dragging via Pointer Events ---
   let dragStart: { pointerX: number; pointerY: number; originX: number; originY: number } | null = null;
-
   header.addEventListener(
     "pointerdown",
     (e: PointerEvent) => {
@@ -466,16 +521,10 @@ function createDevHud(
       e.stopPropagation();
       header.setPointerCapture(e.pointerId);
       header.style.cursor = "grabbing";
-      dragStart = {
-        pointerX: e.clientX,
-        pointerY: e.clientY,
-        originX: state.x,
-        originY: state.y,
-      };
+      dragStart = { pointerX: e.clientX, pointerY: e.clientY, originX: state.x, originY: state.y };
     },
     { signal },
   );
-
   header.addEventListener(
     "pointermove",
     (e: PointerEvent) => {
@@ -487,17 +536,13 @@ function createDevHud(
     },
     { signal },
   );
-
   const endDrag = (e: PointerEvent) => {
     if (!dragStart) return;
     dragStart = null;
     header.style.cursor = "grab";
-    if (header.hasPointerCapture(e.pointerId)) {
-      header.releasePointerCapture(e.pointerId);
-    }
+    if (header.hasPointerCapture(e.pointerId)) header.releasePointerCapture(e.pointerId);
     saveState();
   };
-
   header.addEventListener("pointerup", endDrag, { signal });
   header.addEventListener("pointercancel", endDrag, { signal });
   window.addEventListener(
@@ -509,13 +554,14 @@ function createDevHud(
     { passive: true, signal },
   );
 
-  // --- Controls ---
-  const slider = (
+  // --- Sliders (tracked so Reset updates them cleanly) ---
+  const sliderSyncs: Array<() => void> = [];
+  const makeSlider = (
     label: string,
     min: number,
     max: number,
     step: number,
-    val: number,
+    getVal: () => number,
     onInput: (v: number) => void,
   ) => {
     const row = document.createElement("label");
@@ -524,13 +570,20 @@ function createDevHud(
       gap: 2px;
     `;
     const readout = document.createElement("span");
-    readout.textContent = `${label}: ${val.toFixed(2)}`;
     const input = document.createElement("input");
     input.type = "range";
     input.min = String(min);
     input.max = String(max);
     input.step = String(step);
-    input.value = String(val);
+
+    const sync = () => {
+      const v = getVal();
+      input.value = String(v);
+      readout.textContent = `${label}: ${v.toFixed(2)}`;
+    };
+    sliderSyncs.push(sync);
+    sync();
+
     input.addEventListener(
       "input",
       () => {
@@ -544,7 +597,13 @@ function createDevHud(
     return row;
   };
 
-  const colorInput = (label: string, color: THREE.Color) => {
+  // --- Color Pickers (update both targetColors & uniform immediately!) ---
+  const colorSyncs: Array<() => void> = [];
+  const makeColor = (
+    label: string,
+    target: THREE.Color,
+    uniform: THREE.Color,
+  ) => {
     const row = document.createElement("label");
     row.style.cssText = css`
       display: flex;
@@ -553,101 +612,169 @@ function createDevHud(
     `;
     const input = document.createElement("input");
     input.type = "color";
-    input.value = `#${color.getHexString()}`;
-    input.addEventListener("input", () => color.set(input.value), { signal });
+    input.style.cssText = css`
+      width: 44px;
+      height: 22px;
+      padding: 0;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+    `;
+
+    const sync = () => {
+      input.value = `#${target.getHexString()}`;
+    };
+    colorSyncs.push(sync);
+    sync();
+
+    input.addEventListener(
+      "input",
+      () => {
+        target.set(input.value);
+        uniform.set(input.value);
+      },
+      { signal },
+    );
     row.append(label, input);
     return row;
   };
 
+  const makeBtn = (text: string, onClick: () => void) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = text;
+    b.style.cssText = css`
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+      color: #eee;
+      font: 11px/1.2 monospace;
+      cursor: pointer;
+    `;
+    b.addEventListener("click", onClick, { signal });
+    return b;
+  };
+
+  // --- Warp Row (Slider + Auto Release) ---
+  let warpOverride = 0;
+  let warpLocked = false;
+  const warpRow = makeSlider(
+    "Warp",
+    0,
+    1,
+    0.01,
+    () => warpOverride,
+    (v) => {
+      warpOverride = v;
+      warpLocked = true;
+      callbacks.onWarpChange(v);
+    },
+  );
+
+  // --- Action Buttons ---
   let paused = false;
-  const btnRow = document.createElement("div");
-  btnRow.style.cssText = css`
+  let starsVisible = true;
+  let uiHidden = false;
+
+  const setPageUiHidden = (hidden: boolean) => {
+    document
+      .querySelectorAll<HTMLElement>(
+        ".title-particles, .wormhole-home__nav, .home-arcane-dock, .codex-shell",
+      )
+      .forEach((el) => {
+        el.style.visibility = hidden ? "hidden" : "visible";
+      });
+  };
+
+  const pauseBtn = makeBtn("Pause", () => {
+    paused = !paused;
+    pauseBtn.textContent = paused ? "Resume" : "Pause";
+    callbacks.onPauseToggle(paused);
+  });
+
+  const starsBtn = makeBtn("Stars: On", () => {
+    starsVisible = !starsVisible;
+    starsBtn.textContent = starsVisible ? "Stars: On" : "Stars: Off";
+    callbacks.onStarsToggle(starsVisible);
+  });
+
+  const hideUiBtn = makeBtn("Hide UI", () => {
+    uiHidden = !uiHidden;
+    hideUiBtn.textContent = uiHidden ? "Show UI" : "Hide UI";
+    setPageUiHidden(uiHidden);
+  });
+
+  const shuffleBtn = makeBtn("Shuffle", () => {
+    callbacks.onShuffle();
+  });
+
+  const warpAutoBtn = makeBtn("Warp: Auto", () => {
+    if (warpLocked) {
+      warpLocked = false;
+      warpOverride = 0;
+      callbacks.onWarpChange(null);
+      sliderSyncs.forEach((s) => s());
+    } else {
+      warpLocked = true;
+      warpOverride = 1;
+      callbacks.onWarpChange(1);
+      sliderSyncs.forEach((s) => s());
+    }
+    warpAutoBtn.textContent = warpLocked ? "Release Warp" : "Test Warp";
+  });
+  warpAutoBtn.textContent = "Test Warp";
+
+  const resetBtn = makeBtn("Reset", () => {
+    warpLocked = false;
+    warpOverride = 0;
+    warpAutoBtn.textContent = "Test Warp";
+    callbacks.onReset();
+    sliderSyncs.forEach((s) => s());
+    colorSyncs.forEach((s) => s());
+  });
+
+  const copyBtn = makeBtn("Copy Palette", async () => {
+    const hex = (c: THREE.Color) => `#${c.getHexString()}`;
+    const paletteLine = `{ deep: "${hex(targetColors.deep)}", fog: "${hex(targetColors.fog)}", base: "${hex(targetColors.base)}", warp: "${hex(targetColors.warp)}", accent: "${hex(targetColors.accent)}" }`;
+    const uniformsBlock = `uSpeed: ${uniforms.uSpeed.value}, uSwirl: ${uniforms.uSwirl.value}, uDensity: ${uniforms.uDensity.value}`;
+    await navigator.clipboard.writeText(`${paletteLine}\n// ${uniformsBlock}`);
+    copyBtn.textContent = "Copied!";
+    setTimeout(() => {
+      copyBtn.textContent = "Copy Palette";
+    }, 1200);
+  });
+
+  const btnGrid = document.createElement("div");
+  btnGrid.style.cssText = css`
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
     margin-top: 2px;
   `;
-
-  const pauseBtn = document.createElement("button");
-  pauseBtn.textContent = "Pause";
-  pauseBtn.type = "button";
-  pauseBtn.addEventListener(
-    "click",
-    () => {
-      paused = !paused;
-      pauseBtn.textContent = paused ? "Resume" : "Pause";
-      callbacks.onPauseToggle(paused);
-    },
-    { signal },
-  );
-
-  let uiHidden = false;
-  const hideUiBtn = document.createElement("button");
-  hideUiBtn.textContent = "Hide Title";
-  hideUiBtn.type = "button";
-  hideUiBtn.addEventListener(
-    "click",
-    () => {
-      uiHidden = !uiHidden;
-      hideUiBtn.textContent = uiHidden ? "Show Title" : "Hide Title";
-      document
-        .querySelectorAll<HTMLElement>(".title-particles, .wormhole-home__nav")
-        .forEach((el) => {
-          el.style.visibility = uiHidden ? "hidden" : "visible";
-        });
-    },
-    { signal },
-  );
-
-  const copyBtn = document.createElement("button");
-  copyBtn.textContent = "Copy";
-  copyBtn.type = "button";
-  copyBtn.addEventListener(
-    "click",
-    async () => {
-      const snippet = JSON.stringify(
-        {
-          uSpeed: uniforms.uSpeed.value,
-          uSwirl: uniforms.uSwirl.value,
-          uDensity: uniforms.uDensity.value,
-          uColorDeep: `#${uniforms.uColorDeep.value.getHexString()}`,
-          uColorBase: `#${uniforms.uColorBase.value.getHexString()}`,
-          uColorWarp: `#${uniforms.uColorWarp.value.getHexString()}`,
-          uColorAccent: `#${uniforms.uColorAccent.value.getHexString()}`,
-        },
-        null,
-        2,
-      );
-      await navigator.clipboard.writeText(snippet);
-      copyBtn.textContent = "Copied!";
-      setTimeout(() => {
-        copyBtn.textContent = "Copy";
-      }, 1200);
-    },
-    { signal },
-  );
-
-  btnRow.append(pauseBtn, hideUiBtn, copyBtn);
+  btnGrid.append(pauseBtn, starsBtn, hideUiBtn, shuffleBtn, warpAutoBtn, resetBtn, copyBtn);
 
   body.append(
-    slider("Warp", 0, 1, 0.01, 0, (v) => callbacks.onWarpChange(v)),
-    slider("Speed", 0, 2, 0.05, uniforms.uSpeed.value, (v) => {
+    warpRow,
+    makeSlider("Speed", 0, 2, 0.05, () => uniforms.uSpeed.value, (v) => {
       uniforms.uSpeed.value = v;
     }),
-    slider("Swirl", -3, 3, 0.05, uniforms.uSwirl.value, (v) => {
+    makeSlider("Swirl", -3, 3, 0.05, () => uniforms.uSwirl.value, (v) => {
       uniforms.uSwirl.value = v;
     }),
-    slider("Density", 0.4, 1.8, 0.02, uniforms.uDensity.value, (v) => {
+    makeSlider("Density", 0.4, 1.8, 0.02, () => uniforms.uDensity.value, (v) => {
       uniforms.uDensity.value = v;
     }),
-    slider("A/B Split", 0, 1, 0.01, uniforms.uSplit.value, (v) => {
+    makeSlider("A/B Split", 0, 1, 0.01, () => uniforms.uSplit.value, (v) => {
       uniforms.uSplit.value = v;
     }),
-    colorInput("Deep", uniforms.uColorDeep.value),
-    colorInput("Base", uniforms.uColorBase.value),
-    colorInput("Warp", uniforms.uColorWarp.value),
-    colorInput("Accent", uniforms.uColorAccent.value),
-    btnRow,
+    makeColor("Deep Sky", targetColors.deep, uniforms.uColorDeep.value),
+    makeColor("Mist Fog", targetColors.fog, uniforms.uColorFog.value),
+    makeColor("Base", targetColors.base, uniforms.uColorBase.value),
+    makeColor("Warp", targetColors.warp, uniforms.uColorWarp.value),
+    makeColor("Accent", targetColors.accent, uniforms.uColorAccent.value),
+    btnGrid,
   );
 
   panel.append(header, body);
@@ -657,7 +784,14 @@ function createDevHud(
   clampPosition();
 
   return {
+    syncFromTargets: () => {
+      colorSyncs.forEach((s) => s());
+    },
+    updateFps: (fps: number) => {
+      fpsBadge.textContent = `${fps} fps`;
+    },
     dispose: () => {
+      if (uiHidden) setPageUiHidden(false);
       controller.abort();
       panel.remove();
     },

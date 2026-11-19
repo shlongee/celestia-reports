@@ -1,27 +1,32 @@
 :root {
   view-transition-name: none;
-  --bg: #03050b;
+  --bg: #02060d;
   --sheet-bg: #efe2c4;
   --sheet-bg-edge: #d8c295;
   --surface: rgba(255, 249, 234, 0.78);
   --text: #221810;
   --muted: #65523b;
-  --border: rgba(94, 65, 30, 0.36);
-  --accent: #7a3e0e;
-  --gold: #d9a13d;
-  --glow-rgb: 217, 161, 61;
-  --rim-rgb: 255, 224, 155;
-  font-family: var(--kejter), system-ui, sans-serif;
+  --border: rgba(45, 130, 118, 0.38);
+  --accent: #0f6b5c;
+  --gold: #26d6a6;
+  --glow-rgb: 36, 224, 158;
+  --rim-rgb: 140, 245, 255;
+  font-family: var(--morning-breeze), system-ui, sans-serif;
 }
 
 html.dark {
-  --sheet-bg: #15110d;
-  --sheet-bg-edge: #090705;
-  --surface: rgba(28, 22, 17, 0.86);
-  --text: #f3e4c6;
-  --muted: #b5a387;
-  --border: rgba(217, 161, 61, 0.32);
-  --accent: #e4b154;
+  --sheet-bg: #131110;
+  --sheet-bg-edge: #08080a;
+  --surface: rgba(22, 24, 28, 0.86);
+  --text: #eef6f3;
+  --muted: #a1b5b0;
+  --border: rgba(46, 219, 173, 0.3);
+  --accent: #5cf2be;
+}
+
+pre,
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 * {
@@ -53,7 +58,6 @@ a {
   color: var(--accent);
 }
 
-/* Global Persistent Wormhole & Ambient Outer Vignette */
 .wormhole-global-bg {
   position: fixed;
   inset: 0;
@@ -76,7 +80,6 @@ a {
   );
 }
 
-/* Centered Opaque Old-Magic Manuscript Codex */
 .codex-shell {
   position: relative;
   z-index: 2;
@@ -91,7 +94,7 @@ a {
   position: relative;
   width: min(52rem, 100%);
   border-radius: 12px;
-  border: 1px solid rgba(217, 161, 61, 0.45);
+  border: 1px solid rgba(72, 224, 180, 0.38);
   color: var(--text);
   background:
     radial-gradient(ellipse at 50% 0%, rgba(255, 224, 155, 0.08), transparent 60%),
@@ -107,16 +110,15 @@ a {
     inset -36px 0 64px -22px rgba(0, 0, 0, 0.5),
     inset 0 24px 48px -24px rgba(0, 0, 0, 0.34),
     inset 0 -24px 48px -24px rgba(0, 0, 0, 0.38),
-    inset 0 0 0 6px rgba(217, 161, 61, 0.06),
-    0 0 0 1px rgba(255, 224, 158, 0.14),
-    0 0 46px rgba(102, 136, 255, 0.2),
-    0 0 96px rgba(217, 161, 61, 0.14),
+    inset 0 0 0 6px rgba(72, 224, 180, 0.05),
+    0 0 0 1px rgba(168, 245, 255, 0.14),
+    0 0 46px rgba(32, 220, 165, 0.2),
+    0 0 96px rgba(176, 92, 255, 0.15),
     0 24px 60px rgba(0, 0, 0, 0.8);
   overflow: hidden;
   transition: background-color 280ms ease, backdrop-filter 280ms ease, border-color 280ms ease;
 }
 
-/* Tiled 1:1 High-Res Manuscript Noise & Subtle Fiber Texture */
 .codex-sheet::before {
   content: "";
   position: absolute;
@@ -136,7 +138,6 @@ a {
   background-repeat: repeat;
 }
 
-/* Inner Gilded Manuscript Rule */
 .codex-sheet::after {
   content: "";
   position: absolute;
@@ -152,7 +153,6 @@ a {
   z-index: 1;
 }
 
-/* Crystal / Magic Glass Mode */
 html.crystal .codex-sheet {
   background:
     linear-gradient(
@@ -191,7 +191,6 @@ html.crystal .codex-sheet::before {
   opacity: 0.045;
 }
 
-/* Header & Arcane Toolbar */
 header {
   padding: 1.15rem clamp(1.25rem, 4vw, 2.5rem) 0.85rem;
   border-bottom: 1px solid var(--border);
@@ -254,7 +253,6 @@ html:not(.dark):not(.immersive) .arcane-btn {
     0 0 16px rgba(136, 230, 255, 0.42);
 }
 
-/* Fantasy Theme Sigil Morph */
 .arcane-sigil {
   transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -333,12 +331,12 @@ html:not(.dark) .sigil-moon {
   font-size: 0.9rem;
 }
 
-/* Immersive Home */
 html.immersive,
 body.immersive {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .immersive-stage,
@@ -349,6 +347,7 @@ body.immersive {
   height: 100dvh;
   overflow: hidden;
   isolation: isolate;
+  touch-action: none;
 }
 
 .title-particles {
@@ -410,7 +409,6 @@ body.immersive {
   max-width: calc(100vw - 2rem);
 }
 
-/* Interactive Elements Base (Touch-Safe!) */
 .wormhole-nav__btn,
 .post-card,
 .tag-pill,
@@ -420,12 +418,12 @@ body.immersive {
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  touch-action: none;
   --mx: 50%;
   --my: 50%;
   --glow-alpha: 0;
 }
 
-/* Cursor Rim & Surface Glow ONLY on true fine-pointer hover devices (fixes Android Firefox!) */
 @media (hover: hover) and (pointer: fine) {
   .wormhole-nav__btn::before,
   .post-card::before,
@@ -512,7 +510,6 @@ body.immersive {
   }
 }
 
-/* Unified Glass Buttons on Home */
 .wormhole-nav__btn {
   padding: 0.78rem 1.55rem;
   border-radius: 999px;
@@ -543,7 +540,6 @@ body.immersive {
   transform: scale(0.96);
 }
 
-/* Blog Controls & Cards */
 .menu,
 .clear-btn {
   padding: 0.45rem 0.9rem;

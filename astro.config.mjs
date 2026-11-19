@@ -24,6 +24,40 @@ export default defineConfig({
         ],
       },
     },
+    {
+      provider: fontProviders.local(),
+      name: "MorningBreeze",
+      cssVariable: "--morning-breeze",
+      fallbacks: ["system-ui", "sans-serif"],
+      options: {
+        variants: [
+          {
+            src: ["./src/assets/fonts/morningbreeze-light.woff"],
+            weight: 300,
+            style: "normal",
+            display: "swap",
+          },
+          {
+            src: ["./src/assets/fonts/morningbreeze-regular.woff"],
+            weight: 400,
+            style: "normal",
+            display: "swap",
+          },
+          {
+            src: ["./src/assets/fonts/morningbreeze-italic.woff"],
+            weight: 400,
+            style: "italic",
+            display: "swap",
+          },
+          {
+            src: ["./src/assets/fonts/morningbreeze-bold.woff"],
+            weight: 700,
+            style: "normal",
+            display: "swap",
+          },
+        ],
+      },
+    },
   ],
   vite: {
     build: {

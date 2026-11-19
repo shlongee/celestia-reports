@@ -40,13 +40,13 @@ class TouchTexture {
     this.texture.generateMipmaps = false;
   }
 
-  addPoint(x: number, y: number) {
+  addPoint(x: number, y: number, boost = 0) {
     const point = { x, y };
-    let force = 0;
+    let force = boost;
     if (this.lastPoint) {
       const dx = point.x - this.lastPoint.x;
       const dy = point.y - this.lastPoint.y;
-      force = Math.min((dx * dx + dy * dy) * 10000, 1);
+      force = Math.max(boost, Math.min((dx * dx + dy * dy) * 10000, 1));
     }
     this.lastPoint = point;
     this.points.push({ ...point, age: 0, force });
@@ -160,12 +160,13 @@ function setupWarpLinks(effects: TravelEffects) {
     }
 
     event.preventDefault();
+    event.stopPropagation();
     if (navigating) return;
     navigating = true;
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reducedMotion) {
-      window.location.assign(link.href);
+      void navigate(link.href);
       return;
     }
 
@@ -176,12 +177,12 @@ function setupWarpLinks(effects: TravelEffects) {
     }, 450);
   };
 
-  document.addEventListener("click", onLinkClick);
+  document.addEventListener("click", onLinkClick, { capture: true });
   document.addEventListener(
     "astro:before-swap",
     () => {
       if (navigationTimer) window.clearTimeout(navigationTimer);
-      document.removeEventListener("click", onLinkClick);
+      document.removeEventListener("click", onLinkClick, { capture: true });
     },
     { once: true },
   );
@@ -278,6 +279,8 @@ async function initTitleParticles() {
   const travelEffects: TravelEffects = { ready: false, start: () => {} };
   setupWarpLinks(travelEffects);
   if (!canvas || !fallback) return;
+  if (canvas.dataset.particlesInit === "true") return;
+  canvas.dataset.particlesInit = "true";
 
   const fontFamily = getComputedStyle(fallback).fontFamily || "sans-serif";
 
@@ -370,16 +373,25 @@ async function initTitleParticles() {
   };
   travelEffects.start = startDisintegration;
 
-  const pointerToTouch = (clientX: number, clientY: number) => {
+  const pointerToTouch = (clientX: number, clientY: number, boost = 0) => {
     const bounds = canvas.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
     touchTexture.addPoint(
       THREE.MathUtils.clamp((clientX - bounds.left) / bounds.width, 0, 1),
       THREE.MathUtils.clamp(1 - (clientY - bounds.top) / bounds.height, 0, 1),
+      boost,
     );
   };
+
+  const onPointerDown = (event: PointerEvent) => {
+    if ((event.target as Element | null)?.closest("a, button")) return;
+    touchTexture.resetStroke();
+    pointerToTouch(event.clientX, event.clientY, 0.75);
+  };
+
   const onPointerMove = (event: PointerEvent) => {
-    pointerToTouch(event.clientX, event.clientY);
+    const boost = event.pointerType === "touch" ? 0.35 : 0;
+    pointerToTouch(event.clientX, event.clientY, boost);
   };
   function clearPointer() {
     touchTexture.resetStroke();
@@ -478,7 +490,11 @@ async function initTitleParticles() {
     disposed = true;
     cancelAnimationFrame(animationFrame);
     cancelAnimationFrame(resizeFrame);
+    delete canvas.dataset.particlesInit;
+    window.removeEventListener("pointerdown", onPointerDown);
     window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", clearPointer);
+    window.removeEventListener("pointercancel", clearPointer);
     window.removeEventListener("pointerleave", clearPointer);
     window.removeEventListener("resize", onResize);
     mesh?.geometry.dispose();
@@ -488,11 +504,14 @@ async function initTitleParticles() {
     renderer.dispose();
   };
 
+  window.addEventListener("pointerdown", onPointerDown, { passive: true });
   window.addEventListener("pointermove", onPointerMove, { passive: true });
+  window.addEventListener("pointerup", clearPointer, { passive: true });
+  window.addEventListener("pointercancel", clearPointer, { passive: true });
   window.addEventListener("pointerleave", clearPointer, { passive: true });
   window.addEventListener("resize", onResize, { passive: true });
-  window.addEventListener("pagehide", dispose, { once: true });
   document.addEventListener("astro:before-swap", dispose, { once: true });
+  window.addEventListener("pagehide", dispose, { once: true });
 
   try {
     await loadFont(fontFamily);

@@ -64,32 +64,41 @@ vec2 rotate2D(vec2 v, float a) {
 vec3 renderWormhole(vec2 uv, float swirlStrength) {
   float dist = max(length(uv), 0.0005);
   vec2 dir = uv / dist;
-  vec2 swirled = rotate2D(dir, swirlStrength / (dist + 0.35));
+  vec2 swirled = rotate2D(dir, swirlStrength / (dist + 0.4));
 
   float travel = uTime * uSpeed + uWarp * 2.2;
-  float radial = 1.35 / dist + travel;
+  float radial = 1.25 / dist + travel;
 
-  // Blur out fine octaves in the far center so the wormhole dissolves into mist
-  float detailFade = smoothstep(0.06, 0.62, dist);
+  float detailFade = smoothstep(0.06, 0.65, dist);
 
-  float n1 = fbm3(vec3(swirled * 1.6, radial * 0.6 - travel * 0.24), detailFade);
-  float n2 = fbm3(vec3(swirled * 3.0 + n1 * 0.5, radial * 1.1 - travel * 0.52), detailFade * 0.85);
+  float n1 = fbm3(vec3(swirled * 1.4, radial * 0.42 - travel * 0.2), detailFade);
+  float n2 = fbm3(vec3(swirled * 2.8 + n1 * 0.85, radial * 0.78 - travel * 0.45), detailFade * 0.9);
 
-  vec3 neb = mix(uColorBase, uColorWarp, uWarp * 0.72 + n1 * 0.38);
-  vec3 col = mix(uColorDeep, neb, smoothstep(0.22, 0.84, n2 * uDensity));
-  col += uColorAccent * smoothstep(0.56, 0.92, n1 * n2) * (0.48 + uWarp * 0.85) * detailFade;
+  float ribbon = 1.0 - abs(n2 * 2.0 - 1.0);
+  ribbon = pow(clamp(ribbon, 0.0,1.0), 2.5) * uDensity;
 
-  // Strong mysterious distance fog enveloping the deep throat of the wormhole
-  float distanceFog = smoothstep(0.78, 0.04, dist);
-  float deepMist = exp(-dist * 2.5);
-  col = mix(col, uColorFog, clamp(distanceFog * 0.82 + deepMist * 0.32, 0.0, 0.96));
+  float rays = fbm3(vec3(swirled * 6.5, radial * 0.18 - travel * 0.12), detailFade);
+  float curtain = ribbon * (0.55 + 0.78 * rays);
 
-  // Subtle luminous veil at the mist horizon
-  float veil = smoothstep(0.55, 0.08, dist) * smoothstep(0.0, 0.25, dist);
-  col += mix(uColorWarp, uColorAccent, 0.35 + uWarp * 0.5) * veil * (0.18 + uWarp * 0.45);
+  float bandShift = fract(n1 * 1.35 + radial * 0.06 + uWarp * 0.25);
+  vec3 auroraHue = mix(uColorBase, uColorWarp, smoothstep(0.0, 0.33, bandShift));
+  auroraHue = mix(auroraHue, uColorAccent, smoothstep(0.33, 0.66, bandShift));
+  auroraHue = mix(auroraHue, uColorBase, smoothstep(0.66, 1.0, bandShift));
 
-  // Gentle side-margin illumination (stays visible behind the blog)
-  col = mix(uColorDeep * 0.9 + uColorFog * 0.15, col, smoothstep(2.6, 0.25, dist));
+  vec3 secondaryHue = mix(uColorWarp, uColorAccent, smoothstep(0.2, 0.8, n2));
+  vec3 col = mix(uColorDeep, auroraHue, clamp(curtain * 0.95, 0.0, 1.0));
+  col += secondaryHue * pow(clamp(curtain, 0.0, 1.5), 1.9) * (0.55 + uWarp * 0.75);
+
+  // Strong mysterious distance fog
+  float distanceFog = smoothstep(0.82, 0.04, dist);
+  float deepMist = exp(-dist * 2.4);
+  col = mix(col, uColorFog, clamp(distanceFog * 0.84 + deepMist * 0.3, 0.0, 0.96));
+
+  // Luminous horizon mist
+  float veil = smoothstep(0.58, 0.08, dist) * smoothstep(0.0, 0.26, dist);
+  col += mix(uColorBase, uColorAccent, 0.45 + uWarp * 0.4) * veil * (0.16 + uWarp * 0.42);
+
+  col = mix(uColorDeep * 0.85 + uColorFog * 0.18, col, smoothstep(2.7, 0.25, dist));
   return col;
 }
 
