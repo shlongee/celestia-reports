@@ -50,7 +50,6 @@ input {
 
 a,
 button {
-  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -115,7 +114,7 @@ a {
     0 0 46px rgba(32, 220, 165, 0.2),
     0 0 96px rgba(176, 92, 255, 0.15),
     0 24px 60px rgba(0, 0, 0, 0.8);
-  overflow: hidden;
+  overflow: clip;
   transition: background-color 280ms ease, backdrop-filter 280ms ease, border-color 280ms ease;
 }
 
@@ -418,7 +417,7 @@ body.immersive {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  touch-action: none;
+  touch-action: pan-y pinch-zoom;
   --mx: 50%;
   --my: 50%;
   --glow-alpha: 0;
