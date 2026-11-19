@@ -23,9 +23,9 @@ void main() {
   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
   float depth = max(-mvPosition.z, 1.0);
   vDepth = depth;
-  vTwinkle = 0.7 + 0.3 * sin(uTime * (1.6 + fract(aSeed) * 2.6) + aSeed * 6.2831);
+  vTwinkle = 0.65 + 0.35 * sin(uTime * (1.5 + fract(aSeed * 7.3) * 3.0) + aSeed * 6.2831);
 
-  float size = aSize * (1.0 + uWarp * 0.9) * uPixelRatio * (360.0 / depth);
-  gl_PointSize = clamp(size, 2.5, 46.0 * uPixelRatio);
+  float size = aSize * (1.0 + uWarp * 1.15) * uPixelRatio * (440.0 / depth);
+  gl_PointSize = clamp(size, 3.0, 54.0 * uPixelRatio);
   gl_Position = projectionMatrix * mvPosition;
 }

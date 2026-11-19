@@ -7,6 +7,15 @@ import { defineConfig, fontProviders } from "astro/config";
 export default defineConfig({
   site: "https://shlongee.github.io",
   integrations: [mdx(), sitemap(), preact()],
+  markdown: {
+    shikiConfig: {
+      themes: {
+        light: "rose-pine-dawn",
+        dark: "aurora-x",
+      },
+      wrap: true,
+    },
+  },
   fonts: [
     {
       provider: fontProviders.local(),

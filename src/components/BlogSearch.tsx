@@ -70,7 +70,7 @@ export default function BlogSearch({ initialPosts, allTags }: Props) {
           id="blog-search-input"
           type="search"
           class="search-input"
-          placeholder="Search words (e.g. bloom, float16, raylib)..."
+          placeholder="Search words or tags (bloom, raylib, float16)..."
           value={query}
           onFocus={loadFullIndex}
           onInput={(e) => {
@@ -112,7 +112,7 @@ export default function BlogSearch({ initialPosts, allTags }: Props) {
       )}
 
       <p class="search-count" role="status">
-        Showing {filtered.length} {filtered.length === 1 ? "post" : "posts"}
+        Showing {filtered.length} {filtered.length === 1 ? "note" : "notes"} found
       </p>
 
       <ul class="post-list">

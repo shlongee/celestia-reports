@@ -1,5 +1,5 @@
 const GLOW_SELECTOR =
-  ".wormhole-nav__btn, .post-card, .tag-pill, .clear-btn, .menu, .arcane-btn";
+  ".wormhole-nav__btn, .nav-link, .post-card, .tag-pill, .clear-btn, .menu, .arcane-btn";
 
 interface GlowState {
   targetX: number;

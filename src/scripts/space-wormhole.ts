@@ -3,8 +3,11 @@ import tunnelVertex from "./wormhole.vert?raw";
 import tunnelFragment from "./wormhole.frag?raw";
 import starsVertex from "./stars.vert?raw";
 import starsFragment from "./stars.frag?raw";
+import mushroomVertex from "./mushroom.vert?raw";
+import mushroomFragment from "./mushroom.frag?raw";
 
 interface WormholePalette {
+  name: string;
   deep: string;
   fog: string;
   base: string;
@@ -13,24 +16,29 @@ interface WormholePalette {
 }
 
 const DARK_PALETTES: WormholePalette[] = [
-  { deep: "#02060d", fog: "#071a26", base: "#18e08d", warp: "#1ab8e8", accent: "#c84dff" },
-  { deep: "#03070e", fog: "#091d2b", base: "#24f0a8", warp: "#4b82ff", accent: "#ff5ea8" },
-  { deep: "#050312", fog: "#130d2e", base: "#1ed6b8", warp: "#6f4dff", accent: "#ff478a" },
-  { deep: "#020806", fog: "#08211b", base: "#3ef27a", warp: "#17c9c3", accent: "#9e5eff" },
-  { deep: "#040610", fog: "#0d1a2e", base: "#20e39e", warp: "#2bb5ff", accent: "#ff8ce0" },
+  { name: "Classic Borealis", deep: "#02060d", fog: "#071a26", base: "#18e08d", warp: "#1ab8e8", accent: "#c84dff" },
+  { name: "Hacker Terminal", deep: "#010502", fog: "#041c0b", base: "#00ff66", warp: "#26c952", accent: "#b8ffd0" },
+  { name: "Monochrome Noir", deep: "#040405", fog: "#16181c", base: "#78808f", warp: "#c2c9d6", accent: "#ffffff" },
+  { name: "Polar Prism", deep: "#03070e", fog: "#091d2b", base: "#24f0a8", warp: "#4b82ff", accent: "#ff5ea8" },
+  { name: "Infrared Thermal", deep: "#080107", fog: "#21051b", base: "#e61c52", warp: "#ff771c", accent: "#ffe14d" },
+  { name: "Cyberpunk Neon", deep: "#070312", fog: "#190a36", base: "#00f5d4", warp: "#ff2a85", accent: "#ffd166" },
+  { name: "Abyssal Trench", deep: "#01050c", fog: "#04182e", base: "#0088ff", warp: "#00f0ff", accent: "#a882ff" },
 ];
 
 const LIGHT_PALETTES: WormholePalette[] = [
-  { deep: "#1b2b3d", fog: "#6c8ba6", base: "#3df2ad", warp: "#4fd6ff", accent: "#eb8cff" },
-  { deep: "#212842", fog: "#7983ad", base: "#52f0c3", warp: "#73a8ff", accent: "#ff9ec7" },
-  { deep: "#182d36", fog: "#67969e", base: "#47eb8f", warp: "#5be0e6", accent: "#c799ff" },
-  { deep: "#20273d", fog: "#7d88a8", base: "#3ae6c1", warp: "#6eb5ff", accent: "#ffa6b8" },
-  { deep: "#28223b", fog: "#877da6", base: "#4de8a5", warp: "#66c7ff", accent: "#ffba94" },
+  { name: "Serene Polar Dawn", deep: "#203347", fog: "#7b9bb8", base: "#47f0b2", warp: "#63dbff", accent: "#e89eff" },
+  { name: "Alabaster Ink (B&W)", deep: "#24272e", fog: "#8d94a1", base: "#b4bcc9", warp: "#dce1eb", accent: "#ffffff" },
+  { name: "Opal & Rosewater", deep: "#2f2742", fog: "#8f80ad", base: "#62e8c4", warp: "#82b4ff", accent: "#ffb3cc" },
+  { name: "Sunlit Mint Jade", deep: "#1c383d", fog: "#749fa3", base: "#4eedaf", warp: "#72dfe8", accent: "#ffe49e" },
+  { name: "Hacker Daybreak", deep: "#12291c", fog: "#578269", base: "#29e878", warp: "#75ffa8", accent: "#e0ffeb" },
 ];
 
 export function mountSpaceWormhole(): void {
   const canvas = document.querySelector<HTMLCanvasElement>("[data-space-wormhole]");
   if (!canvas) return;
+
+  if (canvas.dataset.wormholeMounted) return;
+  canvas.dataset.wormholeMounted = "true";
 
   const isDarkTheme = () => document.documentElement.classList.contains("dark");
   let darkIndex = 0;
@@ -54,7 +62,7 @@ export function mountSpaceWormhole(): void {
     return;
   }
 
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
   renderer.setPixelRatio(pixelRatio);
   renderer.setClearColor(0x03050b, 1);
 
@@ -66,8 +74,8 @@ export function mountSpaceWormhole(): void {
     uTime: { value: 0 },
     uWarp: { value: 0 },
     uSpeed: { value: 0.42 },
-    uSwirl: { value: 2.0 },
-    uDensity: { value: 1.05 },
+    uSwirl: { value: 1.0 },
+    uDensity: { value: 0.7 },
     uSplit: { value: 0.0 },
     uPointer: { value: new THREE.Vector2(0, 0) },
     uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
@@ -107,7 +115,7 @@ export function mountSpaceWormhole(): void {
   bgScene.add(new THREE.Mesh(quadGeo, quadMat));
 
   // Procedural twinkling stars
-  const starCount = 460;
+  const starCount = 550;
   const starPositions = new Float32Array(starCount * 3);
   const starColors = new Float32Array(starCount * 3);
   const starSizes = new Float32Array(starCount);
@@ -129,7 +137,7 @@ export function mountSpaceWormhole(): void {
     starColors[i3] = c.r;
     starColors[i3 + 1] = c.g;
     starColors[i3 + 2] = c.b;
-    starSizes[i] = 1.6 + Math.random() * 2.8;
+    starSizes[i] = Math.random() > 0.86 ? 4.8 + Math.random() * 3.0 : 2.2 + Math.random() * 2.4;
     starSeeds[i] = Math.random();
   }
 
@@ -157,18 +165,227 @@ export function mountSpaceWormhole(): void {
   const stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
 
+    // --- 3D Bioluminescent Aurora Mushrooms ---
+  const capPoints = [
+    new THREE.Vector2(0.0, 14.0),
+    new THREE.Vector2(5.5, 13.0),
+    new THREE.Vector2(11.5, 9.2),
+    new THREE.Vector2(14.5, 4.0),
+    new THREE.Vector2(13.2, 0.8),
+    new THREE.Vector2(6.0, 2.2),
+    new THREE.Vector2(0.0, 3.0),
+  ];
+  const stemPoints = [
+    new THREE.Vector2(0.0, -14.0),
+    new THREE.Vector2(3.6, -12.8),
+    new THREE.Vector2(2.6, -4.0),
+    new THREE.Vector2(3.1, 3.5),
+    new THREE.Vector2(0.0, 4.0),
+  ];
+  const capGeo = new THREE.LatheGeometry(capPoints, 18);
+  const stemGeo = new THREE.LatheGeometry(stemPoints, 12);
+
+  type MushroomEffect = "aurora" | "ripple" | "surge" | "bloom";
+  interface Mushroom3D {
+    group: THREE.Group;
+    capMat: THREE.RawShaderMaterial;
+    stemMat: THREE.RawShaderMaterial;
+    effect: MushroomEffect;
+    label: string;
+    colorHex: string;
+    speedMul: number;
+    phase: number;
+    rotSpeed: THREE.Vector3;
+    popScale: number;
+    popping: boolean;
+    baseScale: number;
+  }
+
+  const mushroomConfigs: Array<{ effect: MushroomEffect; color: string; label: string }> = [
+    { effect: "aurora", color: "#4af2be", label: "✦ Aurora Shift" },
+    { effect: "ripple", color: "#6ee2ff", label: "✦ Warp Ripple" },
+    { effect: "surge", color: "#c98eff", label: "✦ Star Surge" },
+    { effect: "bloom", color: "#ff9ed6", label: "✦ Spore Glow" },
+    { effect: "aurora", color: "#7effe0", label: "✦ Mist Bloom" },
+  ];
+
+  const mushroomRoot = new THREE.Group();
+  const rayTargets: THREE.Mesh[] = [];
+  const mushrooms: Mushroom3D[] = [];
+
+  const placeMushroomAtSpawn = (m: THREE.Group, zStart: number) => {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 140 + Math.random() * 270;
+    m.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.72, zStart);
+  };
+
+  mushroomConfigs.forEach((cfg, index) => {
+    const group = new THREE.Group();
+    const baseUniforms = {
+      uGlowColor: { value: new THREE.Color(cfg.color) },
+      uFogColor: tunnelUniforms.uColorFog,
+      uTime: tunnelUniforms.uTime,
+      uHover: { value: 0 },
+    };
+
+    const capMat = new THREE.RawShaderMaterial({
+      uniforms: { ...baseUniforms, uIsCap: { value: 1.0 } },
+      vertexShader: mushroomVertex,
+      fragmentShader: mushroomFragment,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+
+    const stemMat = new THREE.RawShaderMaterial({
+      uniforms: { ...baseUniforms, uIsCap: { value: 0.0 } },
+      vertexShader: mushroomVertex,
+      fragmentShader: mushroomFragment,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+
+    const capMesh = new THREE.Mesh(capGeo, capMat);
+    const stemMesh = new THREE.Mesh(stemGeo, stemMat);
+    capMesh.userData.mushroomIndex = index;
+    stemMesh.userData.mushroomIndex = index;
+    rayTargets.push(capMesh, stemMesh);
+
+    group.add(stemMesh, capMesh);
+    group.scale.setScalar(0.85 + Math.random() * 0.45);
+    placeMushroomAtSpawn(group, -240 - index * 240);
+    mushroomRoot.add(group);
+
+    mushrooms.push({
+      group,
+      capMat,
+      stemMat,
+      effect: cfg.effect,
+      label: cfg.label,
+      colorHex: cfg.color,
+      speedMul: 0.9 + Math.random() * 0.5,
+      phase: index * 1.9,
+      rotSpeed: new THREE.Vector3(
+        (Math.random() - 0.5) * 0.7,
+        (Math.random() - 0.5) * 0.9,
+        (Math.random() - 0.5) * 0.6,
+      ),
+      popScale: 1,
+      popping: false,
+      baseScale: 0.75 + Math.random() * 0.55,
+    });
+  });
+  scene.add(mushroomRoot);
+
+  // Star surge boost (triggered by clicking the purple mushroom)
+  let starSurge = 0;
+  let pulseTimer = 0;
+  const triggerPulse = () => {
+    overrideWarp = null;
+    warpTarget = 0.48;
+    if (pulseTimer) window.clearTimeout(pulseTimer);
+    pulseTimer = window.setTimeout(() => {
+      warpTarget = 0;
+    }, 360);
+  };
+
+  // Raycaster for hovering & clicking 3D mushrooms without blocking page elements
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  let hoveredMushroomIdx = -1;
+
+  const updateNdc = (clientX: number, clientY: number) => {
+    ndc.set(
+      (clientX / Math.max(1, window.innerWidth)) * 2 - 1,
+      -(clientY / Math.max(1, window.innerHeight)) * 2 + 1,
+    );
+  };
+
+  const spawnDomBurst = (cx: number, cy: number, color: string, label: string) => {
+    const whisper = document.createElement("span");
+    whisper.className = "mushroom-whisper";
+    whisper.textContent = label;
+    whisper.style.left = `${cx}px`;
+    whisper.style.top = `${cy - 12}px`;
+    whisper.style.color = color;
+    document.body.append(whisper);
+    window.setTimeout(() => whisper.remove(), 1100);
+
+    for (let i = 0; i < 12; i++) {
+      const spore = document.createElement("span");
+      spore.className = "mushroom-spore";
+      const a = (i / 12) * Math.PI * 2 + Math.random() * 0.35;
+      const dist = 28 + Math.random() * 52;
+      spore.style.left = `${cx}px`;
+      spore.style.top = `${cy}px`;
+      spore.style.background = color;
+      spore.style.color = color;
+      spore.style.setProperty("--dx", `${Math.cos(a) * dist}px`);
+      spore.style.setProperty("--dy", `${Math.sin(a) * dist}px`);
+      document.body.append(spore);
+      window.setTimeout(() => spore.remove(), 800);
+    }
+  };
+
+  const isBlockedElement = (target: EventTarget | null) =>
+    Boolean((target as Element | null)?.closest(".codex-sheet, a, button, input, aside"));
+
+  const onMushroomHover = (e: PointerEvent) => {
+    if (!isFinePointer || isBlockedElement(e.target)) {
+      if (hoveredMushroomIdx !== -1) {
+        hoveredMushroomIdx = -1;
+        document.body.style.cursor = "";
+      }
+      return;
+    }
+    updateNdc(e.clientX, e.clientY);
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObjects(rayTargets, false);
+    const nextIdx = hits.length ? (hits[0].object.userData.mushroomIndex as number) : -1;
+    if (nextIdx !== hoveredMushroomIdx) {
+      hoveredMushroomIdx = nextIdx;
+      document.body.style.cursor = nextIdx !== -1 ? "pointer" : "";
+    }
+  };
+
+  const onMushroomClick = (e: MouseEvent) => {
+    if (isBlockedElement(e.target)) return;
+    updateNdc(e.clientX, e.clientY);
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObjects(rayTargets, false);
+    if (!hits.length) return;
+
+    const idx = hits[0].object.userData.mushroomIndex as number;
+    const m = mushrooms[idx];
+    if (!m || m.popping) return;
+
+    m.popping = true;
+    spawnDomBurst(e.clientX, e.clientY, m.colorHex, m.label);
+
+    if (m.effect === "aurora") onShuffle();
+    else if (m.effect === "ripple") triggerPulse();
+    else if (m.effect === "surge") starSurge = 1.0;
+  };
+
+  window.addEventListener("pointermove", onMushroomHover, { passive: true });
+  document.addEventListener("click", onMushroomClick);
+
   const targetPointer = new THREE.Vector2();
   let warpTarget = 0;
   let overrideWarp: number | null = null;
   let paused = false;
   let rafId = 0;
   let last = performance.now();
-  let disposed = false;
+  let fpsFrames = 0;
+  let fpsLast = performance.now();
 
   const resize = () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    const pr = Math.min(window.devicePixelRatio || 1, 1.5);
     renderer.setPixelRatio(pr);
     renderer.setSize(width, height, false);
     tunnelUniforms.uResolution.value.set(width, height);
@@ -214,14 +431,56 @@ export function mountSpaceWormhole(): void {
   };
 
   const animate = (now: number) => {
-    let fpsFrames = 0;
-    let fpsLast = performance.now();
-
-    if (disposed) return;
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
 
     if (!paused && !reducedMotion) {
+      starSurge = Math.max(0, starSurge - dt * 0.9);
+      const speed = 42 + tunnelUniforms.uWarp.value * 950 + starSurge * 280;
+      const pos = starGeo.getAttribute("position") as THREE.BufferAttribute;
+      for (let i = 0; i < starCount; i++) {
+        let z = pos.getZ(i) + speed * dt;
+        if (z > 100) z = -1400;
+        pos.setZ(i, z);
+      }
+      pos.needsUpdate = true;
+
+      const tSec = tunnelUniforms.uTime.value;
+      mushrooms.forEach((m, i) => {
+        const hoverTarget = i === hoveredMushroomIdx ? 1 : 0;
+        const curHover = m.capMat.uniforms.uHover.value as number;
+        const nextHover = curHover + (hoverTarget - curHover) * Math.min(1, dt * 8);
+        m.capMat.uniforms.uHover.value = nextHover;
+        m.stemMat.uniforms.uHover.value = nextHover;
+
+        m.group.position.z += speed * 0.82 * m.speedMul * dt;
+        m.group.position.x += Math.sin(tSec * 0.7 + m.phase) * 14 * dt;
+        m.group.position.y += Math.cos(tSec * 0.85 + m.phase) * 12 * dt;
+
+        m.group.rotation.x += m.rotSpeed.x * dt;
+        m.group.rotation.y += m.rotSpeed.y * dt;
+        m.group.rotation.z += m.rotSpeed.z * dt;
+
+        m.group.scale.setScalar(m.baseScale * m.popScale);
+
+        if (m.popping) {
+          m.popScale -= dt * 3.8;
+          m.group.rotation.y += dt * 14;
+          if (m.popScale <= 0.02) {
+            m.popping = false;
+            m.popScale = 0.05;
+            placeMushroomAtSpawn(m.group, -1300);
+          }
+        } else {
+          m.popScale += (1 - m.popScale) * Math.min(1, dt * 4);
+        }
+        m.group.scale.setScalar(m.popScale);
+
+        if (m.group.position.z > 95) {
+          placeMushroomAtSpawn(m.group, -1350);
+          m.popScale = 0.2;
+        }
+      });
       tunnelUniforms.uTime.value += dt;
     }
 
@@ -236,17 +495,6 @@ export function mountSpaceWormhole(): void {
     const activeWarp = overrideWarp ?? warpTarget;
     tunnelUniforms.uWarp.value += (activeWarp - tunnelUniforms.uWarp.value) * Math.min(1, dt * 5);
     tunnelUniforms.uPointer.value.lerp(targetPointer, Math.min(1, dt * 4)); 
-
-    if (!paused && !reducedMotion) {
-      const speed = 42 + tunnelUniforms.uWarp.value * 950;
-      const pos = starGeo.getAttribute("position") as THREE.BufferAttribute;
-      for (let i = 0; i < starCount; i++) {
-        let z = pos.getZ(i) + speed * dt;
-        if (z > 100) z = -1400;
-        pos.setZ(i, z);
-      }
-      pos.needsUpdate = true;
-    }
 
     camera.position.x = tunnelUniforms.uPointer.value.x * 16;
     camera.position.y = tunnelUniforms.uPointer.value.y * 10;
@@ -285,8 +533,8 @@ export function mountSpaceWormhole(): void {
        onShuffle,
        onReset: () => {
          tunnelUniforms.uSpeed.value = 0.42;
-         tunnelUniforms.uSwirl.value = 2.0;
-         tunnelUniforms.uDensity.value = 1.05;
+         tunnelUniforms.uSwirl.value = 1.0;
+         tunnelUniforms.uDensity.value = 0.7;
          tunnelUniforms.uSplit.value = 0.0;
          overrideWarp = null;
          onThemeSync();
@@ -295,8 +543,15 @@ export function mountSpaceWormhole(): void {
     
     if (import.meta.hot) {
       import.meta.hot.accept(
-        ["./wormhole.vert?raw", "./wormhole.frag?raw", "./stars.vert?raw", "./stars.frag?raw"],
-        ([wVert, wFrag, sVert, sFrag]) => {
+        [
+          "./wormhole.vert?raw",
+          "./wormhole.frag?raw",
+          "./stars.vert?raw",
+          "./stars.frag?raw",
+          "./mushroom.vert?raw",
+          "./mushroom.frag?raw",
+        ],
+        ([wVert, wFrag, sVert, sFrag, mVert, mFrag]) => {
           if (wVert) quadMat.vertexShader = wVert.default;
           if (wFrag) quadMat.fragmentShader = wFrag.default;
           if (wVert || wFrag) quadMat.needsUpdate = true;
@@ -304,33 +559,43 @@ export function mountSpaceWormhole(): void {
           if (sVert) starMat.vertexShader = sVert.default;
           if (sFrag) starMat.fragmentShader = sFrag.default;
           if (sVert || sFrag) starMat.needsUpdate = true;
+
+          if (mVert || mFrag) {
+            for (const m of mushrooms) {
+              if (mVert) {
+                m.capMat.vertexShader = mVert.default;
+                m.stemMat.vertexShader = mVert.default;
+              }
+              if (mFrag) {
+                m.capMat.fragmentShader = mFrag.default;
+                m.stemMat.fragmentShader = mFrag.default;
+              }
+              m.capMat.needsUpdate = true;
+              m.stemMat.needsUpdate = true;
+            }
+          }
         },
       );
     }
   }
 
-  const dispose = () => {
-    if (disposed) return;
-    disposed = true;
-    cancelAnimationFrame(rafId);
-    window.removeEventListener("resize", resize);
-    window.removeEventListener("pointermove", onPointerMove);
-    window.removeEventListener("shlongeeland:warp", onWarp);
-    devHud?.dispose();
-    quadGeo.dispose();
-    quadMat.dispose();
-    starGeo.dispose();
-    starMat.dispose();
-    renderer.dispose();
-  };
-
   resize();
   window.addEventListener("resize", resize, { passive: true });
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   window.addEventListener("shlongeeland:warp", onWarp);
+  window.addEventListener("shlongeeland:pulse", triggerPulse);
   window.addEventListener("shlongeeland:theme", onThemeSync);
   window.addEventListener("shlongeeland:shuffle", onShuffle);
   document.addEventListener("astro:page-load", onPageLoad);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      last = performance.now();
+      if (!rafId && !reducedMotion) rafId = requestAnimationFrame(animate);
+    } else if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+  });
 
   if (reducedMotion) {
     requestAnimationFrame(animate);

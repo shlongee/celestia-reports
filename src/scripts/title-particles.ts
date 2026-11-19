@@ -7,8 +7,8 @@ const TOUCH_RADIUS = 0.15;
 const SOURCE_THRESHOLD = 34;
 const CAMERA_Z = 300;
 const CAMERA_FOV = 50;
-const MAX_SOURCE_WIDTH = 1024;
-const MAX_SOURCE_HEIGHT = 576;
+const MAX_SOURCE_WIDTH = 680;
+const MAX_SOURCE_HEIGHT = 360;
 
 import vertexShader from "./title-particles.vert?raw";
 import fragmentShader from "./title-particles.frag?raw";
@@ -276,11 +276,12 @@ async function initTitleParticles() {
     "[data-title-particles]",
   );
   const fallback = document.querySelector<HTMLElement>("[data-title-fallback]");
-  const travelEffects: TravelEffects = { ready: false, start: () => {} };
-  setupWarpLinks(travelEffects);
   if (!canvas || !fallback) return;
   if (canvas.dataset.particlesInit === "true") return;
   canvas.dataset.particlesInit = "true";
+
+  const travelEffects: TravelEffects = { ready: false, start: () => {} };
+  setupWarpLinks(travelEffects);
 
   const fontFamily = getComputedStyle(fallback).fontFamily || "sans-serif";
 
@@ -332,6 +333,8 @@ async function initTitleParticles() {
     fragmentShader,
     transparent: true,
     depthTest: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
   });
 
   if (import.meta.env.DEV && import.meta.hot) {
@@ -402,7 +405,7 @@ async function initTitleParticles() {
     const bounds = canvas.getBoundingClientRect();
     const viewportWidth = Math.max(1, Math.round(bounds.width));
     const viewportHeight = Math.max(1, Math.round(bounds.height));
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.setSize(viewportWidth, viewportHeight, false);
     camera.aspect = viewportWidth / viewportHeight;
     camera.updateProjectionMatrix();
@@ -415,9 +418,9 @@ async function initTitleParticles() {
       MAX_SOURCE_WIDTH / visibleWidth,
       MAX_SOURCE_HEIGHT / visibleHeight,
     );
-    if (viewportWidth <= 480) targetParticleSize = 0.75;
-    else if (viewportWidth <= 900) targetParticleSize = 0.95;
-    else targetParticleSize = 1.2;
+    if (viewportWidth <= 480) targetParticleSize = 1.65;
+    else if (viewportWidth <= 900) targetParticleSize = 2.05;
+    else targetParticleSize = 2.45;
     const sourceWidth = Math.max(1, Math.round(visibleWidth * sourceScale));
     const sourceHeight = Math.max(1, Math.round(visibleHeight * sourceScale));
     const source = makeTitleSource(title, sourceWidth, sourceHeight, fontFamily);
@@ -447,8 +450,22 @@ async function initTitleParticles() {
     cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(rebuild);
   };
+
+const onVisibilityChange = () => {
+  if (disposed) return;
+  if (document.hidden) {
+    cancelAnimationFrame(animationFrame);
+    animationFrame = 0;
+  } else if (!animationFrame) {
+    animationFrame = requestAnimationFrame(render);
+  }
+};
+
   const render = (now: number) => {
-    if (disposed) return;
+    if (disposed || document.hidden) {
+      animationFrame = 0;
+      return;
+    }
     const elapsed = (now - startedAt) / 1000;
     uniforms.uTime.value = elapsed;
     if (outro) {
@@ -497,6 +514,7 @@ async function initTitleParticles() {
     window.removeEventListener("pointercancel", clearPointer);
     window.removeEventListener("pointerleave", clearPointer);
     window.removeEventListener("resize", onResize);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
     mesh?.geometry.dispose();
     material.dispose();
     sourceTexture?.dispose();
@@ -510,6 +528,7 @@ async function initTitleParticles() {
   window.addEventListener("pointercancel", clearPointer, { passive: true });
   window.addEventListener("pointerleave", clearPointer, { passive: true });
   window.addEventListener("resize", onResize, { passive: true });
+  document.addEventListener("visibilitychange", onVisibilityChange);
   document.addEventListener("astro:before-swap", dispose, { once: true });
   window.addEventListener("pagehide", dispose, { once: true });
 
@@ -525,10 +544,6 @@ async function initTitleParticles() {
     showFallback();
   }
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-  void initTitleParticles();
-});
 
 document.addEventListener("astro:page-load", () => {
   void initTitleParticles();

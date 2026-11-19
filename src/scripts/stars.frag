@@ -1,7 +1,6 @@
 precision highp float;
 
 uniform float uWarp;
-uniform vec3 uFogColor;
 
 varying vec3 vColor;
 varying float vSeed;
@@ -20,19 +19,26 @@ void main() {
   if (d > 0.5) discard;
 
   vec2 ruv = rotate2D(uv, vSeed * 3.14159);
+  vec2 druv = rotate2D(uv, vSeed * 3.14159 + 0.78539); // 45-deg diagonal rays
 
-  float core = exp(-d * d * 52.0);
-  float halo = exp(-d * 6.8) * 0.42;
-  float spikeX = exp(-abs(ruv.y) * 26.0) * exp(-abs(ruv.x) * 6.5);
-  float spikeY = exp(-abs(ruv.x) * 26.0) * exp(-abs(ruv.y) * 6.5);
-  float spikes = (spikeX + spikeY) * 0.48;
+  float core = exp(-d * d * 32.0);
+  float halo = exp(-d * 4.8) * 0.62;
 
-  float intensity = (core + halo + spikes) * vTwinkle;
-  intensity *= smoothstep(0.5, 0.2, d);
+  float mainSpikes =
+    (exp(-abs(ruv.y) * 24.0) * exp(-abs(ruv.x) * 5.2) +
+     exp(-abs(ruv.x) * 24.0) * exp(-abs(ruv.y) * 5.2)) * 0.6;
 
-  float fog = smoothstep(1380.0, 220.0, vDepth);
-  vec3 starCol = mix(uFogColor, vColor + vec3(core * 0.55), fog);
-  float alpha = clamp(intensity * fog * (0.85 + uWarp * 0.35), 0.0, 1.0);
+  float isHero = step(0.84, fract(vSeed * 13.7));
+  float diagSpikes =
+    (exp(-abs(druv.y) * 30.0) * exp(-abs(druv.x) * 8.0) +
+     exp(-abs(druv.x) * 30.0) * exp(-abs(druv.y) * 8.0)) * 0.42 * isHero;
+
+  float intensity = (core * 1.25 + halo + mainSpikes + diagSpikes) * vTwinkle;
+  intensity *= smoothstep(0.5, 0.16, d);
+
+  float fog = smoothstep(1420.0, 260.0, vDepth);
+  vec3 starCol = mix(vColor, vec3(1.0), core * 0.65);
+  float alpha = clamp(intensity * fog * (0.95 + uWarp * 0.45), 0.0, 1.0);
 
   gl_FragColor = vec4(starCol, alpha);
 }

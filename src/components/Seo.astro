@@ -17,7 +17,7 @@ const {
 
 const siteUrl = Astro.site?.toString().replace(/\/$/, "") ?? "https://shlongee.github.io";
 const canonical = new URL(path, `${siteUrl}/`).toString();
-const fullTitle = title === "Shlongeeland" ? "Shlongeeland" : `${title} — Shlongeeland`;
+const fullTitle = title === "Code spells, shaders, and dev notes by Shlongee." ? "Shlongeeland" : `${title} — Shlongeeland`;
 ---
 
 <title>{fullTitle}</title>

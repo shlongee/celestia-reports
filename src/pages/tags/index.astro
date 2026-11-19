@@ -14,6 +14,7 @@ const tags = Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0]
 
 <BaseLayout title="Tags" description="Browse all blog tags in Shlongeeland.">
   <h1>Tags</h1>
+  <p class="page-lede">Pick a tag to filter notes.</p>
   <ul class="tag-grid">
     {tags.map(([tag, count]) => (
       <li>

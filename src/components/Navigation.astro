@@ -1,6 +1,21 @@
+---
+const pathname = Astro.url.pathname;
+const links = [
+  { href: "/", label: "Home", match: (p: string) => p === "/" },
+  { href: "/blog/", label: "Blog", match: (p: string) => p.startsWith("/blog") },
+  { href: "/tags/", label: "Tags", match: (p: string) => p.startsWith("/tags") },
+  { href: "/about/", label: "About", match: (p: string) => p.startsWith("/about") },
+];
+---
+
 <div id="main-menu" class="nav-links">
-  <a href="/">Home</a>
-  <a href="/blog/">Blog</a>
-  <a href="/tags/">Tags</a>
-  <a href="/about/">About</a>
+  {links.map((item) => (
+    <a
+      href={item.href}
+      class="nav-link"
+      aria-current={item.match(pathname) ? "page" : undefined}
+    >
+      {item.label}
+    </a>
+  ))}
 </div>
