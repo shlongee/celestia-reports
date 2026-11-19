@@ -204,7 +204,7 @@ function makeTitleSource(
   let fontSize = Math.min(height * 0.8, width * 0.15);
   context.font = `700 ${fontSize}px ${fontFamily}`;
   context.letterSpacing = `${fontSize * 0.035}px`;
-  const maximumWidth = width * 0.88;
+  const maximumWidth = width * 0.93;
   const measuredWidth = context.measureText(title).width;
   if (measuredWidth > maximumWidth) fontSize *= maximumWidth / measuredWidth;
 
@@ -404,18 +404,18 @@ async function initTitleParticles() {
     const bounds = canvas.getBoundingClientRect();
     const viewportWidth = Math.max(1, Math.round(bounds.width));
     const viewportHeight = Math.max(1, Math.round(bounds.height));
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(viewportWidth, viewportHeight, false);
     camera.aspect = viewportWidth / viewportHeight;
     camera.updateProjectionMatrix();
 
-    const visibleHeight = 2 * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV * 0.5)) * CAMERA_Z;
+    const visibleHeight =
+      2 * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV * 0.5)) * CAMERA_Z;
     const visibleWidth = visibleHeight * camera.aspect;
 
-    // Guarantee crisp letter sampling width even on narrow portrait phones
     const targetSourceWidth = THREE.MathUtils.clamp(
-      Math.round(viewportWidth * 1.25),
-      440,
+      Math.round(viewportWidth * 1.5),
+      540,
       MAX_SOURCE_WIDTH,
     );
     const sourceScale = targetSourceWidth / visibleWidth;
@@ -423,11 +423,8 @@ async function initTitleParticles() {
     const sourceHeight = Math.max(1, Math.round(visibleHeight * sourceScale));
     const inverseSourceScale = 1 / sourceScale;
 
-    targetParticleSize = inverseSourceScale * (viewportWidth <= 520 ? 2.5 : 2.3);
+    targetParticleSize = viewportWidth <= 520 ? 2.65 : 2.45;
 
-    if (viewportWidth <= 480) targetParticleSize = 1.65;
-    else if (viewportWidth <= 900) targetParticleSize = 2.05;
-    else targetParticleSize = 2.45;
     const source = makeTitleSource(title, sourceWidth, sourceHeight, fontFamily);
     const geometry = makeGeometry(source.pixels, sourceWidth, sourceHeight);
     const texture = new THREE.CanvasTexture(source.canvas);
@@ -491,11 +488,12 @@ const onVisibilityChange = () => {
         0,
         easeOutQuad(sizeProgress),
       );
-    } else {
+      } else {
       const intro = easeOutQuad(Math.min(elapsed, 1));
       const depthIntro = easeOutQuad(Math.min(elapsed / 1.5, 1));
-      uniforms.uRandom.value = THREE.MathUtils.lerp(1, 2, intro);
-      uniforms.uDepth.value = THREE.MathUtils.lerp(40, 4, depthIntro);
+      const isCompact = canvas.clientWidth <= 600;
+      uniforms.uRandom.value = THREE.MathUtils.lerp(1, isCompact ? 0.75 : 1.8, intro);
+      uniforms.uDepth.value = THREE.MathUtils.lerp(40, isCompact ? 2.0 : 4.0, depthIntro);
       uniforms.uSize.value = THREE.MathUtils.lerp(
         0.5,
         targetParticleSize,
