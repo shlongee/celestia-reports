@@ -8,7 +8,6 @@ const SOURCE_THRESHOLD = 34;
 const CAMERA_Z = 300;
 const CAMERA_FOV = 50;
 const MAX_SOURCE_WIDTH = 680;
-const MAX_SOURCE_HEIGHT = 360;
 
 import vertexShader from "./title-particles.vert?raw";
 import fragmentShader from "./title-particles.frag?raw";
@@ -410,19 +409,25 @@ async function initTitleParticles() {
     camera.aspect = viewportWidth / viewportHeight;
     camera.updateProjectionMatrix();
 
-    const visibleHeight =
-      2 * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV * 0.5)) * CAMERA_Z;
+    const visibleHeight = 2 * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV * 0.5)) * CAMERA_Z;
     const visibleWidth = visibleHeight * camera.aspect;
-    const sourceScale = Math.min(
-      2,
-      MAX_SOURCE_WIDTH / visibleWidth,
-      MAX_SOURCE_HEIGHT / visibleHeight,
+
+    // Guarantee crisp letter sampling width even on narrow portrait phones
+    const targetSourceWidth = THREE.MathUtils.clamp(
+      Math.round(viewportWidth * 1.25),
+      440,
+      MAX_SOURCE_WIDTH,
     );
+    const sourceScale = targetSourceWidth / visibleWidth;
+    const sourceWidth = Math.max(1, Math.round(visibleWidth * sourceScale));
+    const sourceHeight = Math.max(1, Math.round(visibleHeight * sourceScale));
+    const inverseSourceScale = 1 / sourceScale;
+
+    targetParticleSize = inverseSourceScale * (viewportWidth <= 520 ? 2.5 : 2.3);
+
     if (viewportWidth <= 480) targetParticleSize = 1.65;
     else if (viewportWidth <= 900) targetParticleSize = 2.05;
     else targetParticleSize = 2.45;
-    const sourceWidth = Math.max(1, Math.round(visibleWidth * sourceScale));
-    const sourceHeight = Math.max(1, Math.round(visibleHeight * sourceScale));
     const source = makeTitleSource(title, sourceWidth, sourceHeight, fontFamily);
     const geometry = makeGeometry(source.pixels, sourceWidth, sourceHeight);
     const texture = new THREE.CanvasTexture(source.canvas);
@@ -440,7 +445,6 @@ async function initTitleParticles() {
     uniforms.uTextureSize.value.set(sourceWidth, sourceHeight);
 
     mesh = new THREE.Mesh(geometry, material);
-    const inverseSourceScale = 1 / sourceScale;
     mesh.scale.set(inverseSourceScale, inverseSourceScale, 1);
     mesh.position.set(-visibleWidth / 2, -visibleHeight / 2, 0);
     scene.add(mesh);
