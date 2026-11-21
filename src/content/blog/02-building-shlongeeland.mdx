@@ -1,0 +1,33 @@
+---
+title: "Report #2: Weaving the Shlongeeland Spellbook"
+description: "A simple tour of the Astro static site, seamless aurora wormhole shader, 3D mushrooms, and glowing title particles."
+pubDate: 2026-11-21
+tags: ["astro", "webgl", "shaders", "threejs"]
+---
+
+import SeamVisualizer from '../../components/SeamVisualizer.astro';
+import ParticleBloomVisualizer from '../../components/ParticleBloomVisualizer.astro';
+
+This blog is built with **Astro** for fast static pages and **Three.js** for custom WebGL shaders. Here is how all the pieces fit together.
+
+## 1. Never Resetting the Sky
+When you jump from **Home** to **Blog**, the aurora never flickers or restarts. Astro's `ClientRouter` swaps only the foreground page while keeping the background `<canvas>` alive with `transition:persist`.
+
+## 2. Fixing the Wormhole Seam
+Using `atan(y, x)` for polar shaders creates a sharp cut where `−π` jumps back to `+π`. Instead, we feed seamless circle coordinates `(cosθ, sinθ, depth)` into 3D noise and add a subtle helical wobble so the tunnel coils like a spring:
+
+<SeamVisualizer />
+
+## 3. Glowing Title Particles
+To draw **SHLONGEELAND** in particles, we paint the title onto a hidden 2D canvas, turn bright pixels into instanced quads, and shade each dot with an exponential **core + halo** glow:
+
+```glsl
+float core = exp(-d * d * 6.5);
+float halo = exp(-d * 2.4) * 0.58;
+```
+
+<ParticleBloomVisualizer />
+
+## 4. Living 3D Mushrooms & Search
+* **3D Mushrooms:** Built with `LatheGeometry` and a Fresnel rim shader so they drift with the stars and respond to clicks via `Raycaster`.
+* **Instant Search:** A static `/search-index.json` file built at compile time powers live tag and word filtering with **Preact**—no database needed.

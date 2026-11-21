@@ -1,0 +1,67 @@
+<div class="arcane-viz bloom-viz">
+  <div class="arcane-viz__controls">
+    <label>
+      Core Sharpness: <strong class="val-core">6.5</strong>
+      <input type="range" class="slider-core" min="2" max="16" step="0.5" value="6.5" />
+    </label>
+    <label>
+      Halo Glow: <strong class="val-halo">0.58</strong>
+      <input type="range" class="slider-halo" min="0" max="1" step="0.02" value="0.58" />
+    </label>
+  </div>
+  <canvas class="arcane-viz__canvas bloom-canvas" width="520" height="140"></canvas>
+  <p class="arcane-viz__note">Combining a tight core with an exponential halo keeps letters readable while glowing softly.</p>
+</div>
+
+<script>
+  function initBloomViz() {
+    document.querySelectorAll<HTMLElement>(".bloom-viz").forEach((root) => {
+      if (root.dataset.vizInit) return;
+      root.dataset.vizInit = "true";
+
+      const canvas = root.querySelector<HTMLCanvasElement>(".bloom-canvas");
+      const ctx = canvas?.getContext("2d");
+      const sCore = root.querySelector<HTMLInputElement>(".slider-core");
+      const sHalo = root.querySelector<HTMLInputElement>(".slider-halo");
+      const lCore = root.querySelector<HTMLElement>(".val-core");
+      const lHalo = root.querySelector<HTMLElement>(".val-halo");
+      if (!canvas || !ctx || !sCore || !sHalo || !lCore || !lHalo) return;
+
+      const draw = () => {
+        const k = parseFloat(sCore.value);
+        const hAmt = parseFloat(sHalo.value);
+        lCore.textContent = k.toFixed(1);
+        lHalo.textContent = hAmt.toFixed(2);
+
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.fillStyle = "#060b14";
+        ctx.fillRect(0, 0, w, h);
+
+        const dots = 7;
+        for (let i = 0; i < dots; i++) {
+          const cx = ((i + 1) / (dots + 1)) * w;
+          const cy = h / 2 + Math.sin(i * 1.1) * 14;
+          const radius = 34;
+
+          for (let y = -radius; y <= radius; y++) {
+            for (let x = -radius; x <= radius; x++) {
+              const d = Math.hypot(x, y) / radius;
+              if (d > 1) continue;
+              const core = Math.exp(-d * d * k);
+              const halo = Math.exp(-d * 2.4) * hAmt;
+              const a = Math.min(1, (core + halo) * (1 - d * d));
+              ctx.fillStyle = `rgba(${Math.round(85 + core * 170)}, ${Math.round(220 + core * 35)}, 255, ${a.toFixed(3)})`;
+              ctx.fillRect(cx + x, cy + y, 1, 1);
+            }
+          }
+        }
+      };
+
+      sCore.addEventListener("input", draw);
+      sHalo.addEventListener("input", draw);
+      draw();
+    });
+  }
+  document.addEventListener("astro:page-load", initBloomViz);
+</script>

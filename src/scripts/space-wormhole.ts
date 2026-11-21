@@ -16,7 +16,7 @@ interface WormholePalette {
 }
 
 const DARK_PALETTES: WormholePalette[] = [
-  { name: "Classic Borealis", deep: "#02060d", fog: "#071a26", base: "#18e08d", warp: "#1ab8e8", accent: "#c84dff" },
+  { name: "Classic Borealis", deep: "#020710", fog: "#071c2b", base: "#14d8e8", warp: "#24e6b5", accent: "#a66bff" },
   { name: "Hacker Terminal", deep: "#010502", fog: "#041c0b", base: "#00ff66", warp: "#26c952", accent: "#b8ffd0" },
   { name: "Monochrome Noir", deep: "#040405", fog: "#16181c", base: "#78808f", warp: "#c2c9d6", accent: "#ffffff" },
   { name: "Polar Prism", deep: "#03070e", fog: "#091d2b", base: "#24f0a8", warp: "#4b82ff", accent: "#ff5ea8" },
@@ -26,7 +26,7 @@ const DARK_PALETTES: WormholePalette[] = [
 ];
 
 const LIGHT_PALETTES: WormholePalette[] = [
-  { name: "Serene Polar Dawn", deep: "#203347", fog: "#7b9bb8", base: "#47f0b2", warp: "#63dbff", accent: "#e89eff" },
+  { name: "Serene Polar Dawn", deep: "#1c2f45", fog: "#789bb8", base: "#30d0f5", warp: "#5eecc8", accent: "#b78cff" },
   { name: "Alabaster Ink (B&W)", deep: "#24272e", fog: "#8d94a1", base: "#b4bcc9", warp: "#dce1eb", accent: "#ffffff" },
   { name: "Opal & Rosewater", deep: "#2f2742", fog: "#8f80ad", base: "#62e8c4", warp: "#82b4ff", accent: "#ffb3cc" },
   { name: "Sunlit Mint Jade", deep: "#1c383d", fog: "#749fa3", base: "#4eedaf", warp: "#72dfe8", accent: "#ffe49e" },
@@ -48,6 +48,13 @@ export function mountSpaceWormhole(): void {
     isDarkTheme() ? DARK_PALETTES[darkIndex] : LIGHT_PALETTES[lightIndex];
   
   const initial = getInitialPalette();
+
+  const publishPalette = (palette: WormholePalette) => {
+    document.documentElement.dataset.auroraBase = palette.base;
+    document.documentElement.dataset.auroraAccent = palette.accent;
+    window.dispatchEvent(new CustomEvent("shlongeeland:palette", { detail: palette }));
+  };
+  publishPalette(initial);
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let renderer: THREE.WebGLRenderer;
@@ -416,6 +423,7 @@ export function mountSpaceWormhole(): void {
   const onThemeSync = () => {
     const palette = isDarkTheme() ? DARK_PALETTES[darkIndex] : LIGHT_PALETTES[lightIndex];
     applyTargetPalette(palette);
+    publishPalette(palette)
     devHud?.syncFromTargets();
   };
 
@@ -423,9 +431,11 @@ export function mountSpaceWormhole(): void {
     if (isDarkTheme()) {
       darkIndex = (darkIndex + 1) % DARK_PALETTES.length;
       applyTargetPalette(DARK_PALETTES[darkIndex]);
+      publishPalette(DARK_PALETTES[darkIndex])
     } else {
       lightIndex = (lightIndex + 1) % LIGHT_PALETTES.length;
       applyTargetPalette(LIGHT_PALETTES[lightIndex]);
+      publishPalette(LIGHT_PALETTES[lightIndex])
     }
     devHud?.syncFromTargets();
   };

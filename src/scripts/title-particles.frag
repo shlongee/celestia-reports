@@ -1,6 +1,9 @@
 precision highp float;
 
 uniform sampler2D uTexture;
+uniform vec3 uColorPrimary;
+uniform vec3 uColorSecondary;
+
 varying vec2 vPUv;
 varying vec2 vUv;
 varying float vShimmer;
@@ -15,6 +18,7 @@ void main() {
   float alpha = (core + halo) * smoothstep(1.0, 0.35, d) * grey * vShimmer;
   if (alpha < 0.015) discard;
 
-  vec3 tint = mix(vec3(0.35, 0.86, 1.0), vec3(0.95, 0.99, 1.0), clamp(core * 1.1, 0.0, 1.0));
+  vec3 themeTint = mix(uColorPrimary, uColorSecondary, 0.28 + 0.25 * (1.0 - vShimmer));
+  vec3 tint = mix(themeTint, vec3(0.96, 0.99, 1.0), clamp(core * 0.9, 0.0, 1.0));
   gl_FragColor = vec4(tint * alpha, alpha);
 }

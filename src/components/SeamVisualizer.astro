@@ -1,0 +1,71 @@
+<div class="arcane-viz seam-viz">
+  <div class="arcane-viz__controls">
+    <label>
+      Swirl: <strong class="val-swirl">1.0</strong>
+      <input type="range" class="slider-swirl" min="0" max="3" step="0.1" value="1" />
+    </label>
+    <button type="button" class="clear-btn seam-mode">Mode: atan() Seam</button>
+  </div>
+  <canvas class="arcane-viz__canvas seam-canvas" width="520" height="170"></canvas>
+  <p class="arcane-viz__note">Notice the sharp horizontal cut on the left in atan() mode—switching to (cosθ, sinθ) heals it.</p>
+</div>
+
+<script>
+  function initSeamViz() {
+    document.querySelectorAll<HTMLElement>(".seam-viz").forEach((root) => {
+      if (root.dataset.vizInit) return;
+      root.dataset.vizInit = "true";
+
+      const canvas = root.querySelector<HTMLCanvasElement>(".seam-canvas");
+      const ctx = canvas?.getContext("2d");
+      const slider = root.querySelector<HTMLInputElement>(".slider-swirl");
+      const readout = root.querySelector<HTMLElement>(".val-swirl");
+      const modeBtn = root.querySelector<HTMLButtonElement>(".seam-mode");
+      if (!canvas || !ctx || !slider || !readout || !modeBtn) return;
+
+      let seamless = false;
+
+      const draw = () => {
+        const swirl = parseFloat(slider.value);
+        readout.textContent = swirl.toFixed(1);
+        modeBtn.textContent = seamless ? "Mode: Seamless (cosθ, sinθ)" : "Mode: atan() Seam";
+
+        const w = canvas.width;
+        const h = canvas.height;
+        const img = ctx.createImageData(w, h);
+        const cx = w / 2;
+        const cy = h / 2;
+
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const dx = (x - cx) / (h * 0.5);
+            const dy = (y - cy) / (h * 0.5);
+            const dist = Math.max(Math.hypot(dx, dy), 0.05);
+            const angle = Math.atan2(dy, dx) + swirl / (dist + 0.35);
+
+            // Broken raw angle vs smooth cyclic cos(angle)
+            const wave = seamless
+              ? 0.5 + 0.5 * Math.sin(Math.cos(angle) * 3.0 + Math.sin(angle) * 2.0 + 2.0 / dist)
+              : ((angle / Math.PI) * 0.5 + 0.5) % 1;
+
+            const v = Math.max(0, Math.min(1, wave * Math.min(1, dist * 1.4)));
+            const idx = (y * w + x) * 4;
+            img.data[idx] = Math.round(v * 30);
+            img.data[idx + 1] = Math.round(v * 225);
+            img.data[idx + 2] = Math.round(v * 245);
+            img.data[idx + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+      };
+
+      slider.addEventListener("input", draw);
+      modeBtn.addEventListener("click", () => {
+        seamless = !seamless;
+        draw();
+      });
+      draw();
+    });
+  }
+  document.addEventListener("astro:page-load", initSeamViz);
+</script>

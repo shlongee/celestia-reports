@@ -21,15 +21,10 @@ export default defineConfig({
       provider: fontProviders.local(),
       name: "Kejter",
       cssVariable: "--kejter",
-      fallbacks: ["sans-serif"],
+      fallbacks: ["Georgia", "serif"],
       options: {
         variants: [
-          {
-            src: ["./src/assets/fonts/kejter.woff"],
-            weight: 400,
-            style: "normal",
-            display: "swap",
-          },
+          { src: ["./src/assets/fonts/kejter.woff2"], weight: 400, style: "normal", display: "swap" },
         ],
       },
     },
@@ -40,30 +35,10 @@ export default defineConfig({
       fallbacks: ["system-ui", "sans-serif"],
       options: {
         variants: [
-          {
-            src: ["./src/assets/fonts/morningbreeze-light.woff"],
-            weight: 300,
-            style: "normal",
-            display: "swap",
-          },
-          {
-            src: ["./src/assets/fonts/morningbreeze-regular.woff"],
-            weight: 400,
-            style: "normal",
-            display: "swap",
-          },
-          {
-            src: ["./src/assets/fonts/morningbreeze-italic.woff"],
-            weight: 400,
-            style: "italic",
-            display: "swap",
-          },
-          {
-            src: ["./src/assets/fonts/morningbreeze-bold.woff"],
-            weight: 700,
-            style: "normal",
-            display: "swap",
-          },
+          { src: ["./src/assets/fonts/morningbreeze-light.woff2"], weight: 300, style: "normal", display: "swap" },
+          { src: ["./src/assets/fonts/morningbreeze-regular.woff2"], weight: 400, style: "normal", display: "swap" },
+          { src: ["./src/assets/fonts/morningbreeze-italic.woff2"], weight: 400, style: "italic", display: "swap" },
+          { src: ["./src/assets/fonts/morningbreeze-bold.woff2"], weight: 700, style: "normal", display: "swap" },
         ],
       },
     },

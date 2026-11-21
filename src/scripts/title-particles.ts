@@ -314,6 +314,15 @@ async function initTitleParticles() {
     return;
   }
 
+  const targetPrimary = new THREE.Color(document.documentElement.dataset.auroraBase || "#14d8e8");
+  const targetSecondary = new THREE.Color(document.documentElement.dataset.auroraAccent || "#a66bff");
+
+  const onPalette = (e: Event) => {
+    const detail = (e as CustomEvent<{ base?: string; accent?: string }>).detail;
+    if (detail?.base) targetPrimary.set(detail.base);
+    if (detail?.accent) targetSecondary.set(detail.accent);
+  };
+
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 1000);
   camera.position.z = CAMERA_Z;
@@ -325,6 +334,8 @@ async function initTitleParticles() {
     uTextureSize: { value: new THREE.Vector2(1, 1) },
     uTexture: { value: null as THREE.CanvasTexture | null },
     uTouch: { value: touchTexture.texture },
+    uColorPrimary: { value: targetPrimary.clone() },
+    uColorSecondary: { value: targetSecondary.clone() },
   };
   const material = new THREE.RawShaderMaterial({
     uniforms,
@@ -499,6 +510,8 @@ const onVisibilityChange = () => {
         targetParticleSize,
         intro,
       );
+      uniforms.uColorPrimary.value.lerp(targetPrimary, 0.06);
+      uniforms.uColorSecondary.value.lerp(targetSecondary, 0.06);
     }
     touchTexture.update();
     renderer.render(scene, camera);
@@ -517,6 +530,7 @@ const onVisibilityChange = () => {
     window.removeEventListener("pointerleave", clearPointer);
     window.removeEventListener("resize", onResize);
     document.removeEventListener("visibilitychange", onVisibilityChange);
+    window.removeEventListener("shlongeeland:palette", onPalette);
     mesh?.geometry.dispose();
     material.dispose();
     sourceTexture?.dispose();
@@ -533,6 +547,7 @@ const onVisibilityChange = () => {
   document.addEventListener("visibilitychange", onVisibilityChange);
   document.addEventListener("astro:before-swap", dispose, { once: true });
   window.addEventListener("pagehide", dispose, { once: true });
+  window.addEventListener("shlongeeland:palette", onPalette);
 
   try {
     await loadFont(fontFamily);
