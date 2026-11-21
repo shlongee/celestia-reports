@@ -18,26 +18,67 @@ const formattedDate = pubDate.toLocaleDateString("en-US", {
 ---
 
 <BaseLayout title={title} description={description} ogType="article" pubDate={pubDate}>
-  <article class="post-article">
-    <header class="post-header">
-      <p class="post-meta">
-        <time datetime={pubDate.toISOString()}>{formattedDate}</time>
-        {updatedDate && (
-          <span> · Updated {updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+  <div class="post-scale-frame" data-post-scale-frame>
+    <article class="post-article" data-post-article>
+      <header class="post-header">
+        <p class="post-meta">
+          <time datetime={pubDate.toISOString()}>{formattedDate}</time>
+          {updatedDate && (
+            <span> · Updated {updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+          )}
+        </p>
+        <h1>{title}</h1>
+        <p class="post-description">{description}</p>
+        {tags.length > 0 && (
+          <ul class="tag-list" aria-label="Post tags">
+            {tags.map((tag) => (
+              <li><a class="tag-pill" href={`/tags/${encodeURIComponent(tag)}/`}>#{tag}</a></li>
+            ))}
+          </ul>
         )}
-      </p>
-      <h1>{title}</h1>
-      <p class="post-description">{description}</p>
-      {tags.length > 0 && (
-        <ul class="tag-list" aria-label="Post tags">
-          {tags.map((tag) => (
-            <li><a class="tag-pill" href={`/tags/${encodeURIComponent(tag)}/`}>#{tag}</a></li>
-          ))}
-        </ul>
-      )}
-    </header>
-    <div class="prose">
-      <slot />
-    </div>
-  </article>
+      </header>
+      <div class="prose">
+        <slot />
+      </div>
+    </article>
+  </div>
 </BaseLayout>
+
+<script>
+  let cleanupScale: (() => void) | null = null;
+
+  function mountPostScaler() {
+    cleanupScale?.();
+    cleanupScale = null;
+
+    const frame = document.querySelector<HTMLElement>("[data-post-scale-frame]");
+    const article = document.querySelector<HTMLElement>("[data-post-article]");
+    if (!frame || !article) return;
+
+    const sync = () => {
+      const baseWidth = article.offsetWidth;
+      const availWidth = frame.clientWidth;
+      if (!baseWidth || !availWidth) return;
+
+      const scale = Math.min(1, availWidth / baseWidth);
+      if (scale >= 0.999) {
+        article.style.transform = "";
+        frame.style.height = "";
+      } else {
+        article.style.transform = `scale(${scale})`;
+        frame.style.height = `${article.offsetHeight * scale}px`;
+      }
+    };
+
+    const ro = new ResizeObserver(sync);
+    ro.observe(frame);
+    ro.observe(article);
+    document.fonts?.ready.then(sync);
+    sync();
+
+    cleanupScale = () => ro.disconnect();
+  }
+
+  document.addEventListener("astro:after-swap", mountPostScaler);
+  document.addEventListener("astro:page-load", mountPostScaler);
+</script>
